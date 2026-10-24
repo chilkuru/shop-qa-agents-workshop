@@ -10,7 +10,6 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
 COPY web/index.html web/tsconfig.json web/vite.config.ts ./
-COPY web/public ./public
 COPY web/src ./src
 
 # Baked in at build time; the browser, not the container, calls the API.
