@@ -1,0 +1,20 @@
+﻿{
+    "name":  "contract-mcp",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "MCP server exposing the Gherkin contract layer and requirements traceability matrix.",
+    "main":  "index.js",
+    "scripts":  {
+                    "start":  "node index.js",
+                    "selftest":  "node selftest.js",
+                    "docs":  "node generate-docs.mjs",
+                    "docs:verify":  "node verify-docs.mjs"
+                },
+    "dependencies":  {
+                         "@cucumber/gherkin":  "^28.0.0",
+                         "@cucumber/messages":  "^24.1.0",
+                         "@modelcontextprotocol/sdk":  "^1.0.4",
+                         "yaml":  "^2.5.1"
+                     }
+}

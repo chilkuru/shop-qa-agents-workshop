@@ -1,0 +1,15 @@
+{
+  "name": "android-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for emulator and APK lifecycle, so agents can drive Android without shelling out.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "smoke": "node smoke.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}

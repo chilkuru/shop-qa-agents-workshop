@@ -1,0 +1,66 @@
+# Workshop stack: Postgres + backend + web in one command.
+#   docker compose up -d --build
+# Web: http://localhost:5173   API: http://localhost:8081
+#
+# Every credential below is a DEMO value for local use only. Never reuse them,
+# and never deploy this stack publicly as-is: the `test` profile exposes
+# seed/reset endpoints guarded only by TEST_SUPPORT_TOKEN.
+
+name: shop-workshop
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop # demo only
+    volumes:
+      - shop-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U shop -d shop" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./shop-platform/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8081
+      DATABASE_URL: jdbc:postgresql://postgres:5432/shop
+      DATABASE_USER: shop
+      DATABASE_PASSWORD: shop # demo only
+      JWT_SECRET: local-dev-only-secret-change-me-min-32-bytes! # demo only
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      TEST_SUPPORT_TOKEN: local-test-token # demo only; the suites and MCP servers default to it
+      SPRING_PROFILES_ACTIVE: test # enables seed/reset endpoints
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: ./shop-platform
+      dockerfile: ../docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8081
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  shop-pgdata:

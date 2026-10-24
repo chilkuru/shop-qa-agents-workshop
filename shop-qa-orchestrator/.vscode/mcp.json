@@ -1,0 +1,30 @@
+{
+  "servers": {
+    "contract": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/contract-mcp/index.js"],
+      "env": {
+        "CONTRACTS_ROOT": "${workspaceFolder}/contracts"
+      }
+    },
+    "shop-app": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/shop-app-mcp/index.js"],
+      "env": {
+        "SHOP_API_BASE_URL": "http://localhost:8081",
+        "TEST_SUPPORT_TOKEN": "local-test-token"
+      }
+    },
+    "android": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/android-mcp/index.js"],
+      "env": {
+        "APPIUM_URL": "http://127.0.0.1:4723",
+        "APP_PACKAGE": "com.shop.mobile"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "shop-app-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server fronting the shop backend's test-support and read APIs for agent-driven setup.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "smoke": "node smoke.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}

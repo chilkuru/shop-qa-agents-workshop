@@ -1,0 +1,50 @@
+# Thin CI stack for the Shop workshop. Deliberately separate ports from
+# InspireFranchises (8080/8090) so both can run side by side.
+services:
+  jenkins:
+    build: ./jenkins
+    container_name: shop-jenkins
+    ports:
+      - "8092:8080"
+      - "50002:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # The agent runs jobs against the host toolchain rather than in-container SDKs.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false -Dhudson.model.DirectoryBrowserSupport.CSP="
+    restart: unless-stopped
+
+  testlink-db:
+    image: mysql:8.0
+    container_name: shop-testlink-db
+    environment:
+      MYSQL_ROOT_PASSWORD: testlink
+      MYSQL_DATABASE: testlink
+      MYSQL_USER: testlink
+      MYSQL_PASSWORD: testlink
+    volumes:
+      - testlink_db:/var/lib/mysql
+    restart: unless-stopped
+
+  testlink:
+    image: bitnami/testlink:1.9.20
+    container_name: shop-testlink
+    ports:
+      - "8082:8080"
+    environment:
+      TESTLINK_DATABASE_HOST: testlink-db
+      TESTLINK_DATABASE_PORT_NUMBER: "3306"
+      TESTLINK_DATABASE_NAME: testlink
+      TESTLINK_DATABASE_USER: testlink
+      TESTLINK_DATABASE_PASSWORD: testlink
+      TESTLINK_USERNAME: admin
+      TESTLINK_PASSWORD: Admin@12345
+      TESTLINK_EMAIL: admin@shop.in
+    depends_on:
+      - testlink-db
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
+  testlink_db:

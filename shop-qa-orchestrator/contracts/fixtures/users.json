@@ -1,0 +1,30 @@
+{
+  "$comment": "Seeded by V2 migration. Frameworks resolve users by key, never by literal.",
+  "users": {
+    "demo": {
+      "email": "demo@shop.in",
+      "password": "Demo@12345",
+      "fullName": "Demo Shopper",
+      "role": "CUSTOMER"
+    },
+    "priya": {
+      "email": "priya@shop.in",
+      "password": "Priya@12345",
+      "fullName": "Priya Sharma",
+      "role": "CUSTOMER"
+    },
+    "admin": {
+      "email": "admin@shop.in",
+      "password": "Admin@12345",
+      "fullName": "Shop Admin",
+      "role": "ADMIN"
+    },
+    "legacy": {
+      "email": "shopper@example.com",
+      "password": "Password123",
+      "fullName": "Legacy Shopper",
+      "role": "CUSTOMER"
+    }
+  },
+  "wrongPassword": "NotMyPassword@1"
+}

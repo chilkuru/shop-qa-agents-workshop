@@ -1,0 +1,16 @@
+* text=auto
+
+# Scripts that run inside Linux containers or on macOS/Linux must keep LF endings,
+# or Docker builds fail with "bad interpreter" on Windows checkouts.
+mvnw text eol=lf
+gradlew text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.apk binary

@@ -1,0 +1,717 @@
+version: 1
+generated: 2026-10-24T20:14:50.978Z
+implementations:
+  - contract: AUTH-02
+    scenario: Sign in with valid credentials
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AuthSteps.java
+    linked: 2026-08-31T20:35:06.790Z
+  - contract: AUTH-02
+    scenario: Sign in is rejected with the wrong password
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AuthSteps.java
+    linked: 2026-08-31T20:35:06.814Z
+  - contract: AUTH-02
+    scenario: Sign out ends the session
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AuthSteps.java
+    linked: 2026-08-31T20:35:06.836Z
+  - contract: AUTH-02
+    scenario: A protected resource cannot be reached without signing in
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AuthSteps.java
+    linked: 2026-08-31T20:35:06.862Z
+  - contract: CART-01
+    scenario: Add a product to the cart
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CartSteps.java
+    linked: 2026-08-31T20:35:06.878Z
+  - contract: CART-01
+    scenario: Increase the quantity of a cart line
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CartSteps.java
+    linked: 2026-08-31T20:35:06.906Z
+  - contract: CART-01
+    scenario: Remove a product from the cart
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CartSteps.java
+    linked: 2026-08-31T20:35:06.926Z
+  - contract: CART-01
+    scenario: Adding the same product twice merges into one line
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CartSteps.java
+    linked: 2026-08-31T20:35:06.938Z
+  - contract: CART-01
+    scenario: Reducing a quantity to zero removes the line
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CartSteps.java
+    linked: 2026-08-31T20:35:06.955Z
+  - contract: CATALOG-01
+    scenario: Browse every product
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CatalogSteps.java
+    linked: 2026-08-31T20:35:06.967Z
+  - contract: CATALOG-01
+    scenario: Search narrows the catalog by name
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CatalogSteps.java
+    linked: 2026-08-31T20:35:06.977Z
+  - contract: CATALOG-01
+    scenario: Filter the catalog by category
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CatalogSteps.java
+    linked: 2026-08-31T20:35:07.006Z
+  - contract: CATALOG-01
+    scenario: Clearing the filters restores the full catalog
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CatalogSteps.java
+    linked: 2026-08-31T20:35:07.029Z
+  - contract: CATALOG-01
+    scenario: A search with no matches reports an empty catalog
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CatalogSteps.java
+    linked: 2026-08-31T20:35:07.045Z
+  - contract: CHECKOUT-01
+    scenario: Pay with an approved card
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CheckoutSteps.java
+    linked: 2026-08-31T20:35:07.076Z
+  - contract: CHECKOUT-01
+    scenario: A declined card does not place an order
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CheckoutSteps.java
+    linked: 2026-08-31T20:35:07.095Z
+  - contract: CHECKOUT-01
+    scenario: A card with insufficient funds does not place an order
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CheckoutSteps.java
+    linked: 2026-08-31T20:35:07.114Z
+  - contract: CHECKOUT-01
+    scenario: Checking out an empty cart is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CheckoutSteps.java
+    linked: 2026-08-31T20:35:07.126Z
+  - contract: AUTH-02
+    scenario: Sign in with valid credentials
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/auth.steps.ts
+    linked: 2026-08-31T20:35:09.275Z
+  - contract: AUTH-02
+    scenario: Sign in is rejected with the wrong password
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/auth.steps.ts
+    linked: 2026-08-31T20:35:09.293Z
+  - contract: AUTH-02
+    scenario: Sign out ends the session
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/auth.steps.ts
+    linked: 2026-08-31T20:35:09.325Z
+  - contract: CART-01
+    scenario: Add a product to the cart
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/cart.steps.ts
+    linked: 2026-08-31T20:35:09.346Z
+  - contract: CART-01
+    scenario: Increase the quantity of a cart line
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/cart.steps.ts
+    linked: 2026-08-31T20:35:09.361Z
+  - contract: CART-01
+    scenario: Remove a product from the cart
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/cart.steps.ts
+    linked: 2026-08-31T20:35:09.374Z
+  - contract: CART-01
+    scenario: Adding the same product twice merges into one line
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/cart.steps.ts
+    linked: 2026-08-31T20:35:09.415Z
+  - contract: CATALOG-01
+    scenario: Browse every product
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/catalog.steps.ts
+    linked: 2026-08-31T20:35:09.425Z
+  - contract: CATALOG-01
+    scenario: Search narrows the catalog by name
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/catalog.steps.ts
+    linked: 2026-08-31T20:35:09.442Z
+  - contract: CATALOG-01
+    scenario: Filter the catalog by category
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/catalog.steps.ts
+    linked: 2026-08-31T20:35:09.551Z
+  - contract: CATALOG-01
+    scenario: Clearing the filters restores the full catalog
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/catalog.steps.ts
+    linked: 2026-08-31T20:35:09.584Z
+  - contract: CATALOG-01
+    scenario: A search with no matches reports an empty catalog
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/catalog.steps.ts
+    linked: 2026-08-31T20:35:09.626Z
+  - contract: AUTH-02
+    scenario: Sign in with valid credentials
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AuthSteps.java
+    linked: 2026-08-31T21:58:06.288Z
+  - contract: AUTH-02
+    scenario: Sign in is rejected with the wrong password
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AuthSteps.java
+    linked: 2026-08-31T21:58:06.314Z
+  - contract: AUTH-02
+    scenario: Sign out ends the session
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AuthSteps.java
+    linked: 2026-08-31T21:58:06.337Z
+  - contract: CATALOG-01
+    scenario: Browse every product
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CatalogSteps.java
+    linked: 2026-08-31T21:58:06.354Z
+  - contract: CATALOG-01
+    scenario: Search narrows the catalog by name
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CatalogSteps.java
+    linked: 2026-08-31T21:58:06.367Z
+  - contract: CATALOG-01
+    scenario: Filter the catalog by category
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CatalogSteps.java
+    linked: 2026-08-31T21:58:06.386Z
+  - contract: CATALOG-01
+    scenario: Clearing the filters restores the full catalog
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CatalogSteps.java
+    linked: 2026-08-31T21:58:06.400Z
+  - contract: CATALOG-01
+    scenario: A search with no matches reports an empty catalog
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CatalogSteps.java
+    linked: 2026-08-31T21:58:06.413Z
+  - contract: ORDERS-01
+    scenario: A placed order appears in my history
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/OrderHistorySteps.java
+    linked: 2026-08-31T20:35:07.217Z
+  - contract: ORDERS-01
+    scenario: Order history is empty for a shopper who has never bought anything
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/OrderHistorySteps.java
+    linked: 2026-08-31T20:35:07.230Z
+  - contract: ORDERS-01
+    scenario: One shopper cannot see another shopper's order
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/OrderHistorySteps.java
+    linked: 2026-08-31T20:35:07.262Z
+  - contract: PRODUCT-01
+    scenario: Open a product from the catalog
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ProductSteps.java
+    linked: 2026-08-31T20:35:07.276Z
+  - contract: PRODUCT-01
+    scenario: A product shows its category and stock state
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ProductSteps.java
+    linked: 2026-08-31T20:35:07.286Z
+  - contract: PRODUCT-01
+    scenario: Requesting a product that does not exist is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ProductSteps.java
+    linked: 2026-08-31T20:35:07.346Z
+  - contract: AUTH-01
+    scenario: Register a brand new account
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/RegistrationSteps.java
+    linked: 2026-08-31T20:35:07.363Z
+  - contract: AUTH-01
+    scenario: Registering an email that is already taken is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/RegistrationSteps.java
+    linked: 2026-08-31T20:35:07.388Z
+  - contract: AUTH-01
+    scenario: A new account starts with an empty cart
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/RegistrationSteps.java
+    linked: 2026-08-31T20:35:07.402Z
+  - contract: ORDERS-01
+    scenario: A placed order appears in my history
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/orders.steps.ts
+    linked: 2026-08-31T20:35:09.798Z
+  - contract: ORDERS-01
+    scenario: Order history is empty for a shopper who has never bought anything
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/orders.steps.ts
+    linked: 2026-08-31T20:35:09.815Z
+  - contract: PRODUCT-01
+    scenario: Open a product from the catalog
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/product.steps.ts
+    linked: 2026-08-31T20:35:09.846Z
+  - contract: PRODUCT-01
+    scenario: A product shows its category and stock state
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/product.steps.ts
+    linked: 2026-08-31T20:35:09.863Z
+  - contract: AUTH-01
+    scenario: Register a brand new account
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/registration.steps.ts
+    linked: 2026-08-31T20:35:09.875Z
+  - contract: AUTH-01
+    scenario: Registering an email that is already taken is refused
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/registration.steps.ts
+    linked: 2026-08-31T20:35:09.893Z
+  - contract: ORDERS-01
+    scenario: A placed order appears in my history
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/OrderHistorySteps.java
+    linked: 2026-08-31T21:58:06.499Z
+  - contract: ORDERS-01
+    scenario: Order history is empty for a shopper who has never bought anything
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/OrderHistorySteps.java
+    linked: 2026-08-31T21:58:06.508Z
+  - contract: PRODUCT-01
+    scenario: Open a product from the catalog
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/ProductSteps.java
+    linked: 2026-08-31T21:58:06.520Z
+  - contract: PRODUCT-01
+    scenario: A product shows its category and stock state
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/ProductSteps.java
+    linked: 2026-08-31T21:58:06.535Z
+  - contract: AUTH-01
+    scenario: Register a brand new account
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/RegistrationSteps.java
+    linked: 2026-08-31T21:58:06.548Z
+  - contract: AUTH-01
+    scenario: Registering an email that is already taken is refused
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/RegistrationSteps.java
+    linked: 2026-08-31T21:58:06.559Z
+  - contract: ADDRESS-01
+    scenario: The first saved address becomes the default
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AddressSteps.java
+    linked: 2026-08-31T20:35:06.575Z
+  - contract: ADDRESS-01
+    scenario: A second address does not displace the default
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AddressSteps.java
+    linked: 2026-08-31T20:35:06.613Z
+  - contract: ADDRESS-01
+    scenario: The default can be switched
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AddressSteps.java
+    linked: 2026-08-31T20:35:06.633Z
+  - contract: ADDRESS-01
+    scenario: Deleting the default promotes another address
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AddressSteps.java
+    linked: 2026-08-31T20:35:06.659Z
+  - contract: ADMIN-01
+    scenario: An administrator sees every product
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AdminSteps.java
+    linked: 2026-08-31T20:35:06.681Z
+  - contract: ADMIN-01
+    scenario: An ordinary shopper is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AdminSteps.java
+    linked: 2026-08-31T20:35:06.694Z
+  - contract: ADMIN-01
+    scenario: An administrator can change stock
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AdminSteps.java
+    linked: 2026-08-31T20:35:06.741Z
+  - contract: ADMIN-01
+    scenario: Hiding a product removes it from the shopper catalog
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/AdminSteps.java
+    linked: 2026-08-31T20:35:06.760Z
+  - contract: COUPON-01
+    scenario: A valid coupon reduces the total
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CouponSteps.java
+    linked: 2026-08-31T20:35:07.137Z
+  - contract: COUPON-01
+    scenario: A coupon below its minimum order is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CouponSteps.java
+    linked: 2026-08-31T20:35:07.147Z
+  - contract: COUPON-01
+    scenario: An inactive coupon is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CouponSteps.java
+    linked: 2026-08-31T20:35:07.170Z
+  - contract: COUPON-01
+    scenario: An unknown coupon is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CouponSteps.java
+    linked: 2026-08-31T20:35:07.183Z
+  - contract: COUPON-01
+    scenario: A coupon can be removed
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/CouponSteps.java
+    linked: 2026-08-31T20:35:07.196Z
+  - contract: REVIEWS-01
+    scenario: A buyer can review what they bought
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ReviewSteps.java
+    linked: 2026-08-31T20:35:07.412Z
+  - contract: REVIEWS-01
+    scenario: Reviewing again edits the existing review
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ReviewSteps.java
+    linked: 2026-08-31T20:35:07.423Z
+  - contract: REVIEWS-01
+    scenario: A shopper who never bought the product cannot review it
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ReviewSteps.java
+    linked: 2026-08-31T20:35:07.448Z
+  - contract: REVIEWS-01
+    scenario: Reviews are readable without signing in
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/ReviewSteps.java
+    linked: 2026-08-31T20:35:07.473Z
+  - contract: WISHLIST-01
+    scenario: Save a product for later
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/WishlistSteps.java
+    linked: 2026-08-31T20:35:07.487Z
+  - contract: WISHLIST-01
+    scenario: Saving the same product twice keeps one entry
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/WishlistSteps.java
+    linked: 2026-08-31T20:35:07.493Z
+  - contract: WISHLIST-01
+    scenario: Remove a saved product
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/WishlistSteps.java
+    linked: 2026-08-31T20:35:07.505Z
+  - contract: WISHLIST-01
+    scenario: Removing a product that was never saved is refused
+    surface: api
+    repo: shop-api-automation
+    path: src/test/java/com/shop/api/steps/WishlistSteps.java
+    linked: 2026-08-31T20:35:07.512Z
+  - contract: ADDRESS-01
+    scenario: The first saved address becomes the default
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/address.steps.ts
+    linked: 2026-08-31T20:35:08.987Z
+  - contract: ADDRESS-01
+    scenario: A second address does not displace the default
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/address.steps.ts
+    linked: 2026-08-31T20:35:09.019Z
+  - contract: ADDRESS-01
+    scenario: The default can be switched
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/address.steps.ts
+    linked: 2026-08-31T20:35:09.041Z
+  - contract: ADDRESS-01
+    scenario: Deleting the default promotes another address
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/address.steps.ts
+    linked: 2026-08-31T20:35:09.101Z
+  - contract: ADMIN-01
+    scenario: An administrator sees every product
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/admin.steps.ts
+    linked: 2026-08-31T20:35:09.148Z
+  - contract: ADMIN-01
+    scenario: An ordinary shopper is refused
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/admin.steps.ts
+    linked: 2026-08-31T20:35:09.187Z
+  - contract: ADMIN-01
+    scenario: An administrator can change stock
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/admin.steps.ts
+    linked: 2026-08-31T20:35:09.217Z
+  - contract: ADMIN-01
+    scenario: Hiding a product removes it from the shopper catalog
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/admin.steps.ts
+    linked: 2026-08-31T20:35:09.261Z
+  - contract: COUPON-01
+    scenario: A valid coupon reduces the total
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/coupon.steps.ts
+    linked: 2026-08-31T20:35:09.651Z
+  - contract: COUPON-01
+    scenario: A coupon below its minimum order is refused
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/coupon.steps.ts
+    linked: 2026-08-31T20:35:09.684Z
+  - contract: COUPON-01
+    scenario: An inactive coupon is refused
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/coupon.steps.ts
+    linked: 2026-08-31T20:35:09.701Z
+  - contract: COUPON-01
+    scenario: An unknown coupon is refused
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/coupon.steps.ts
+    linked: 2026-08-31T20:35:09.734Z
+  - contract: COUPON-01
+    scenario: A coupon can be removed
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/coupon.steps.ts
+    linked: 2026-08-31T20:35:09.756Z
+  - contract: REVIEWS-01
+    scenario: A buyer can review what they bought
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/reviews.steps.ts
+    linked: 2026-08-31T20:35:09.904Z
+  - contract: REVIEWS-01
+    scenario: Reviewing again edits the existing review
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/reviews.steps.ts
+    linked: 2026-08-31T20:35:09.922Z
+  - contract: REVIEWS-01
+    scenario: Reviews are readable without signing in
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/reviews.steps.ts
+    linked: 2026-08-31T20:35:09.955Z
+  - contract: WISHLIST-01
+    scenario: Save a product for later
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/wishlist.steps.ts
+    linked: 2026-08-31T20:35:09.965Z
+  - contract: WISHLIST-01
+    scenario: Saving the same product twice keeps one entry
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/wishlist.steps.ts
+    linked: 2026-08-31T20:35:09.984Z
+  - contract: WISHLIST-01
+    scenario: Remove a saved product
+    surface: web
+    repo: shop-web-automation
+    path: src/steps/wishlist.steps.ts
+    linked: 2026-08-31T20:35:10.009Z
+  - contract: ADDRESS-01
+    scenario: The first saved address becomes the default
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AddressSteps.java
+    linked: 2026-08-31T21:58:06.140Z
+  - contract: ADDRESS-01
+    scenario: A second address does not displace the default
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AddressSteps.java
+    linked: 2026-08-31T21:58:06.172Z
+  - contract: ADDRESS-01
+    scenario: The default can be switched
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AddressSteps.java
+    linked: 2026-08-31T21:58:06.191Z
+  - contract: ADDRESS-01
+    scenario: Deleting the default promotes another address
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AddressSteps.java
+    linked: 2026-08-31T21:58:06.214Z
+  - contract: ADMIN-01
+    scenario: An administrator sees every product
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AdminSteps.java
+    linked: 2026-08-31T21:58:06.232Z
+  - contract: ADMIN-01
+    scenario: An administrator can change stock
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AdminSteps.java
+    linked: 2026-08-31T21:58:06.254Z
+  - contract: ADMIN-01
+    scenario: Hiding a product removes it from the shopper catalog
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/AdminSteps.java
+    linked: 2026-08-31T21:58:06.270Z
+  - contract: COUPON-01
+    scenario: A valid coupon reduces the total
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CouponSteps.java
+    linked: 2026-08-31T21:58:06.422Z
+  - contract: COUPON-01
+    scenario: A coupon below its minimum order is refused
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CouponSteps.java
+    linked: 2026-08-31T21:58:06.433Z
+  - contract: COUPON-01
+    scenario: An inactive coupon is refused
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CouponSteps.java
+    linked: 2026-08-31T21:58:06.444Z
+  - contract: COUPON-01
+    scenario: An unknown coupon is refused
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CouponSteps.java
+    linked: 2026-08-31T21:58:06.460Z
+  - contract: COUPON-01
+    scenario: A coupon can be removed
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CouponSteps.java
+    linked: 2026-08-31T21:58:06.481Z
+  - contract: REVIEWS-01
+    scenario: A buyer can review what they bought
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/ReviewSteps.java
+    linked: 2026-08-31T21:58:06.568Z
+  - contract: REVIEWS-01
+    scenario: Reviewing again edits the existing review
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/ReviewSteps.java
+    linked: 2026-08-31T21:58:06.580Z
+  - contract: REVIEWS-01
+    scenario: Reviews are readable without signing in
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/ReviewSteps.java
+    linked: 2026-08-31T21:58:06.592Z
+  - contract: WISHLIST-01
+    scenario: Save a product for later
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/WishlistSteps.java
+    linked: 2026-08-31T21:58:06.605Z
+  - contract: WISHLIST-01
+    scenario: Saving the same product twice keeps one entry
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/WishlistSteps.java
+    linked: 2026-08-31T21:58:06.620Z
+  - contract: WISHLIST-01
+    scenario: Remove a saved product
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/WishlistSteps.java
+    linked: 2026-08-31T21:58:06.631Z
+  - contract: CART-01
+    scenario: Add a product to the cart
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CartSteps.java
+    linked: 2026-10-24T19:11:19.307Z
+  - contract: CART-01
+    scenario: Adding the same product twice merges into one line
+    surface: mobile
+    repo: shop-mobile-automation
+    path: src/test/java/com/shop/mobile/steps/CartSteps.java
+    linked: 2026-10-24T19:11:19.440Z

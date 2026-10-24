@@ -1,0 +1,56 @@
+# =============================================================================
+# Local stack for shop-platform.
+#   docker compose up -d
+#
+# Every setting below is passed as an environment variable — the same images run
+# unchanged on ECS / App Service / Cloud Run with different values.
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+    ports:
+      - "5432:5432"
+    volumes:
+      - shop-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U shop -d shop" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shop-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8081
+      DATABASE_URL: jdbc:postgresql://postgres:5432/shop
+      DATABASE_USER: shop
+      DATABASE_PASSWORD: shop
+      JWT_SECRET: local-dev-only-secret-change-me-min-32-bytes!
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      TEST_SUPPORT_TOKEN: local-test-token
+      # `test` enables the seed/reset endpoints — NEVER set this in production.
+      SPRING_PROFILES_ACTIVE: test
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  shop-pgdata:

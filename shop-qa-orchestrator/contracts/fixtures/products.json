@@ -1,0 +1,23 @@
+{
+  "$comment": "Mirrors Flyway V2 seed. Frameworks look products up by name; ids are for API seeding only.",
+  "catalogSize": 12,
+  "categories": ["Audio", "Furniture", "Kitchen", "Peripherals"],
+  "products": [
+    { "id": 1, "sku": "SKU-ESP-001", "name": "Espresso Machine", "category": "Kitchen", "pricePaise": 4990000 },
+    { "id": 2, "sku": "SKU-GRD-002", "name": "Burr Grinder", "category": "Kitchen", "pricePaise": 1890000 },
+    { "id": 3, "sku": "SKU-KTL-003", "name": "Gooseneck Kettle", "category": "Kitchen", "pricePaise": 450000 },
+    { "id": 4, "sku": "SKU-HDP-004", "name": "Studio Headphones", "category": "Audio", "pricePaise": 2490000 },
+    { "id": 5, "sku": "SKU-SPK-005", "name": "Bookshelf Speakers", "category": "Audio", "pricePaise": 3990000 },
+    { "id": 6, "sku": "SKU-MIC-006", "name": "USB Microphone", "category": "Audio", "pricePaise": 1290000 },
+    { "id": 7, "sku": "SKU-CHR-007", "name": "Ergonomic Chair", "category": "Furniture", "pricePaise": 3490000 },
+    { "id": 8, "sku": "SKU-DSK-008", "name": "Standing Desk", "category": "Furniture", "pricePaise": 5990000 },
+    { "id": 9, "sku": "SKU-LMP-009", "name": "Desk Lamp", "category": "Furniture", "pricePaise": 299900 },
+    { "id": 10, "sku": "SKU-KEY-010", "name": "Mechanical Keyboard", "category": "Peripherals", "pricePaise": 1490000 },
+    { "id": 11, "sku": "SKU-MOU-011", "name": "Wireless Mouse", "category": "Peripherals", "pricePaise": 349900 },
+    { "id": 12, "sku": "SKU-MON-012", "name": "4K Monitor", "category": "Peripherals", "pricePaise": 5490000 }
+  ],
+  "searches": {
+    "espresso": { "term": "espresso", "expectedCount": 1, "expectedNames": ["Espresso Machine"] },
+    "noMatch": { "term": "xyzzy", "expectedCount": 0, "expectedNames": [] }
+  }
+}

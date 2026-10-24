@@ -1,0 +1,100 @@
+// Runs whichever surfaces are selected and publishes ONE Allure report across all of them.
+// Mobile is opt-in because it needs a booted emulator and an Appium server.
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'SURFACES', choices: ['api', 'api+web', 'api+web+mobile', 'web'],
+               description: 'Which suites to run')
+        string(name: 'TAGS', defaultValue: '', description: 'Extra cucumber tag filter, e.g. @smoke')
+        booleanParam(name: 'PUBLISH_TESTLINK', defaultValue: false,
+                     description: 'Push results to TestLink on :8082')
+    }
+
+    environment {
+        SHOP_API_BASE_URL   = 'http://host.docker.internal:8081'
+        WEB_BASE_URL        = 'http://host.docker.internal:5173'
+        TEST_SUPPORT_TOKEN  = 'local-test-token'
+        CONTRACTS_DIR       = "${WORKSPACE}/shop-qa-orchestrator/contracts"
+    }
+
+    options {
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    stages {
+        stage('Contract check') {
+            steps {
+                dir('shop-qa-orchestrator/mcp/contract-mcp') {
+                    sh 'npm ci || npm install'
+                    sh 'CONTRACTS_ROOT=$CONTRACTS_DIR node selftest.js'
+                }
+            }
+        }
+
+        stage('API') {
+            when { expression { params.SURFACES.contains('api') } }
+            steps {
+                dir('shop-api-automation') {
+                    sh "mvn -B clean test ${params.TAGS ? "-Dcucumber.filter.tags='@api and ${params.TAGS}'" : ''}"
+                }
+            }
+        }
+
+        stage('Web') {
+            when { expression { params.SURFACES.contains('web') } }
+            steps {
+                dir('shop-web-automation') {
+                    sh 'npm ci || npm install'
+                    sh 'npx playwright install --with-deps chromium'
+                    sh 'npx bddgen && npx playwright test'
+                }
+            }
+        }
+
+        stage('Mobile') {
+            when { expression { params.SURFACES.contains('mobile') } }
+            steps {
+                dir('shop-mobile-automation') {
+                    sh 'mvn -B clean test'
+                }
+            }
+        }
+
+        stage('Coverage matrix') {
+            steps {
+                dir('shop-qa-orchestrator/mcp/contract-mcp') {
+                    sh '''CONTRACTS_ROOT=$CONTRACTS_DIR node -e "
+                      import('./contracts.js').then(m => {
+                        const r = process.env.CONTRACTS_ROOT;
+                        const s = m.loadAllScenarios(r + '/features');
+                        const i = m.loadCoverage(r + '/coverage/coverage.yaml');
+                        const gaps = m.findGaps(s, i);
+                        console.log('open gaps: ' + gaps.length);
+                        for (const g of gaps) console.log('  ' + g.contractId + ' @' + g.surface + ' :: ' + g.scenario);
+                      });
+                    "'''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+              rm -rf allure-results && mkdir -p allure-results
+              for pair in "api:shop-api-automation/target/allure-results" \
+                          "web:shop-web-automation/allure-results" \
+                          "mobile:shop-mobile-automation/target/allure-results"; do
+                name="${pair%%:*}"; path="${pair#*:}"
+                if [ -d "$path" ]; then
+                  for f in "$path"/*; do cp "$f" "allure-results/${name}-$(basename "$f")"; done
+                fi
+              done
+            '''
+            allure includeProperties: false, results: [[path: 'allure-results']]
+            cleanWs(notFailBuild: true)
+        }
+    }
+}

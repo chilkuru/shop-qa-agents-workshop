@@ -1,0 +1,27 @@
+{
+  "$comment": "MockPaymentGateway routes on card number alone. Any future expiry, any 3-digit CVC.",
+  "cards": {
+    "approved": {
+      "number": "4111111111111111",
+      "expiry": "12/30",
+      "cvc": "123",
+      "outcome": "APPROVED"
+    },
+    "declined": {
+      "number": "4000000000000002",
+      "expiry": "12/30",
+      "cvc": "123",
+      "outcome": "DECLINED"
+    },
+    "insufficientFunds": {
+      "number": "4000000000009995",
+      "expiry": "12/30",
+      "cvc": "123",
+      "outcome": "INSUFFICIENT_FUNDS"
+    }
+  },
+  "shipping": {
+    "name": "Demo Shopper",
+    "address": "42 MG Road, Bengaluru, Karnataka 560001"
+  }
+}

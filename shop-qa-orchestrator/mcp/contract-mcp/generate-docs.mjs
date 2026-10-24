@@ -1,0 +1,864 @@
+// Generates the Shop QA handbook as Markdown, self-contained interactive HTML, and PDF.
+// Usage: node generate-docs.mjs   (from mcp/contract-mcp)
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { collect } from './docs-data.js';
+import { diagramsFor, sections } from './docs-model.js';
+
+const d = collect();
+const DIAGRAMS = diagramsFor({
+  contracts: d.contracts.length,
+  scenarios: d.scenarios.length,
+  covered: d.totals.covered,
+  gaps: d.totals.gap,
+});
+const { contractRows } = sections(d);
+const OUT = join(d.shopRoot, 'shop-qa-orchestrator', 'docs');
+mkdirSync(OUT, { recursive: true });
+
+const SURFACE_ORDER = ['api', 'web', 'mobile'];
+
+/* ------------------------------------------------------------------ helpers */
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function mdTable(headers, rows) {
+  const head = `| ${headers.join(' | ')} |`;
+  const sep = `|${headers.map(() => '---').join('|')}|`;
+  const body = rows.map((r) => `| ${r.join(' | ')} |`).join('\n');
+  return `${head}\n${sep}\n${body}`;
+}
+
+/* ------------------------------------------------------------------ content */
+
+const RUN_COMMANDS = [
+  ['Postgres', '`cd shop-platform && docker compose up -d postgres`', '`cd shop-platform; docker compose up -d postgres`', 'Docker Desktop must be running'],
+  ['Backend', '`cd shop-platform/backend && SPRING_PROFILES_ACTIVE=test mvn spring-boot:run`', '`cd shop-platform\\backend; $env:SPRING_PROFILES_ACTIVE="test"; mvn spring-boot:run`', 'Serves :8081; Flyway migrates on start'],
+  ['Web app', '`cd shop-platform/web && VITE_API_BASE_URL=http://localhost:8081 npx vite dev --port 5173`', '`cd shop-platform\\web; $env:VITE_API_BASE_URL="http://localhost:8081"; npx vite dev --port 5173`', 'Serves :5173'],
+  ['Emulator', '`emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect`', '`emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect`', 'Then poll `adb shell getprop sys.boot_completed` until `1`'],
+  ['Appium', '`appium --port 4723`', '`appium --port 4723`', 'Required by the mobile suite only'],
+  ['Mobile APK', '`cd shop-platform/mobile/android && NODE_ENV=production ./gradlew assembleRelease`', '`cd shop-platform\\mobile\\android; $env:NODE_ENV="production"; .\\gradlew.bat assembleRelease`', 'Release only &mdash; a debug APK renders an empty shell'],
+];
+
+const START_SCRIPT_OPTIONS = [
+  ['_(none)_', 'Postgres, backend, web, emulator, Appium; builds the APK only if missing'],
+  ['`-SkipMobile`', 'Postgres, backend and web only'],
+  ['`-BuildApk`', 'Always rebuild the release APK'],
+  ['`-Avd <name>`', 'Use a different AVD (default `shop_test`)'],
+];
+
+const LOCAL_URLS = [
+  ['Web app', 'http://localhost:5173'],
+  ['Backend health', 'http://localhost:8081/actuator/health'],
+  ['Swagger UI (API endpoints)', 'http://localhost:8081/swagger-ui.html'],
+  ['OpenAPI JSON', 'http://localhost:8081/v3/api-docs'],
+  ['Appium status', 'http://127.0.0.1:4723/status'],
+];
+
+const EMULATOR_INPUT_NOTE = 'If you cannot type into the emulator with the PC keyboard, the AVD has `hw.keyboard = no` in `%USERPROFILE%\\.android\\avd\\shop_test.avd\\config.ini`. Set it to `yes` and cold boot (`adb emu kill`, then start with `-no-snapshot-load`). If clicking a field shows a small floating toolbar instead of the keyboard, run `adb shell settings put secure stylus_handwriting_enabled 0`. `start-env.ps1` applies both.';
+
+const SUITE_COMMANDS = [
+  ['API', 'shop-api-automation', '`mvn -B test`', 'backend :8081', '51 scenarios'],
+  ['Web', 'shop-web-automation', '`npx bddgen && npx playwright test`', 'web :5173 + backend', '21 passed, 2 skipped'],
+  ['Mobile', 'shop-mobile-automation', '`mvn -B test`', 'emulator + Appium + backend', '17 scenarios'],
+  ['Merged report', 'shop-qa-orchestrator', '`pwsh scripts/merge-allure.ps1`', 'any suite already run', 'one Allure report'],
+];
+
+const ENV_VARS = [
+  ['`SHOP_API_BASE_URL`', '`http://localhost:8081`', 'all three suites'],
+  ['`WEB_BASE_URL`', '`http://localhost:5173`', 'web suite'],
+  ['`APPIUM_URL`', '`http://127.0.0.1:4723`', 'mobile suite'],
+  ['`TEST_SUPPORT_TOKEN`', '`local-test-token`', 'seeding endpoints'],
+  ['`CONTRACTS_DIR`', '`../shop-qa-orchestrator/contracts`', 'fixture + feature lookup'],
+  ['`APP_PACKAGE`', '`com.shop.mobile`', 'mobile suite'],
+];
+
+const TRAPS = [
+  ['Cucumber matches step TEXT only', 'The Given/Then keyword is ignored, so one phrase cannot be both a precondition and an assertion.', 'Distinct wording: `my cart is empty` vs `my cart is now empty`. Enforced by `selftest.js`.'],
+  ['Allure silently writes zero results', 'Registering the plugin via `@ConfigurationParameter` produces attachments but no `-result.json`, so the report looks empty.', 'Register in `junit-platform.properties`.'],
+  ['Playwright reporter override', '`playwright test --reporter=list` REPLACES the configured reporters, so Allure writes nothing.', 'Never pass `--reporter` on the CLI.'],
+  ['Suite runs twice', 'Setting both `cucumber.features` and a surefire `<includes>` creates two independent selectors; the mobile suite ran twice against one Appium session.', 'Pick one. Mobile uses includes + `@SelectDirectories`; API uses `cucumber.features`.'],
+  ['RN testID is a raw resource-id', '`AppiumBy.id()` prefixes the app package and never matches.', 'Use `UiSelector().resourceId("...")` via `BaseScreen.byTestId`.'],
+  ['Debug APK is an empty shell', 'A debug build loads its JS bundle from Metro; without Metro every locator times out.', 'Always `assembleRelease` with `NODE_ENV=production`.'],
+  ['Release APK blocks plain HTTP', 'Android 9+ blocks cleartext; the app renders but shows no data, with no error.', '`expo-build-properties` with `usesCleartextTraffic: true`.'],
+  ['noReset leaks the session', 'The previous scenario stays signed in, so the header shows Log out where the test expects Log in.', 'Clear app data in `@Before`.'],
+  ['Virtualised lists', 'Only mounted rows are queryable, so a product further down cannot be located.', 'Search for it first; assert counts via the app&rsquo;s own `result-count`.'],
+  ['Stock is consumed permanently', 'Every checkout decrements stock, so a repeatable suite eventually starves.', '`@BeforeAll` replenishes the catalog through the admin API.'],
+  ['Shared demo account', 'Parallel web workers interleave cart and order state for the same user.', 'Web suite runs `workers: 1`.'],
+  ['PowerShell corrupts binaries', '`adb exec-out screencap -p > file.png` re-encodes and yields an invalid PNG.', '`adb shell screencap` then `adb pull`.'],
+];
+
+const MCP_TOOLS = [
+  ['contract-mcp', 'list_scenarios, get_scenario, get_coverage_matrix, find_gaps, link_implementation, get_fixture', 'The traceability layer, exposed as agent-queryable tools'],
+  ['shop-app-mcp', 'health, seed_user, seed_cart, reset_user, get_state, get_openapi', 'Test data management for the system under test'],
+  ['android-mcp', 'list_avds, list_devices, start_emulator, wait_for_boot, install_apk, clear_app_data, screenshot, tail_logcat, dump_ui, get_appium_status', 'Emulator and APK lifecycle'],
+];
+
+const AGENTS = [
+  ['shop-qa-orchestrator', 'Intent parsing, delegation, reconciliation', 'contract/*, shop-app/*, runSubagent'],
+  ['contract', 'Authoring and validating Gherkin', 'edit, contract/*'],
+  ['api-automation', 'shop-api-automation only', 'edit, contract/*, shop-app/*'],
+  ['web-automation', 'shop-web-automation only', 'edit, contract/*, shop-app/*, playwright/*'],
+  ['mobile-automation', 'shop-mobile-automation only', 'edit, contract/*, shop-app/*, android/*'],
+];
+
+const REPOS = [
+  {
+    name: 'shop-platform',
+    role: 'System under test. Agents have READ-ONLY access.',
+    stack: 'Spring Boot 3.3.5 &middot; Java 21 &middot; PostgreSQL 16 &middot; React 18 + Vite &middot; React Native (Expo)',
+    components: [
+      ['backend/', 'Spring Boot API. 12 domains, Flyway V1&ndash;V6, JWT, springdoc OpenAPI, Actuator.'],
+      ['backend/.../testsupport/', 'Triple-gated fixture endpoints: `@Profile("test")` + `X-Test-Token` + per-user scoping.'],
+      ['web/', 'React SPA. `data-testid` on every interactive element.'],
+      ['mobile/', 'Expo React Native app. `testID` on every interactive element.'],
+      ['packages/types/', 'TypeScript types generated from the live OpenAPI document.'],
+    ],
+  },
+  {
+    name: 'shop-qa-orchestrator',
+    role: 'QA centre of excellence: contracts, MCP servers, agents, CI.',
+    stack: 'Node 22 &middot; @cucumber/gherkin &middot; MCP SDK',
+    components: [
+      ['contracts/features/', 'The ONLY copy of the Gherkin. 12 contracts, 48 scenarios.'],
+      ['contracts/fixtures/', 'Single source of test data: users, products, cards.'],
+      ['contracts/coverage/coverage.yaml', 'GENERATED by `link_implementation`. Never hand-edited.'],
+      ['mcp/contract-mcp/', 'Traceability MCP + `selftest.js` and `smoke.js`.'],
+      ['mcp/shop-app-mcp/', 'Test data management MCP.'],
+      ['mcp/android-mcp/', 'Emulator lifecycle MCP.'],
+      ['.github/agents/', 'Five agent definitions.'],
+      ['ci/', 'Jenkins pipeline + job XML, TestLink compose.'],
+      ['scripts/merge-allure.ps1', 'Merges three surfaces into one Allure report.'],
+    ],
+  },
+  {
+    name: 'shop-api-automation',
+    role: 'API BDD suite.',
+    stack: 'cucumber-jvm 7.20.1 &middot; Rest Assured 5.5.0 &middot; JUnit Platform &middot; Allure',
+    components: [
+      ['steps/', 'Assertions only. No URLs, no request building.'],
+      ['support/ShopApi.java', 'Facade. The single dependency of the step layer.'],
+      ['services/*Api.java', 'Request building. No assertions.'],
+      ['fixtures/Fixtures.java', 'Repository over the shared fixture files.'],
+      ['context/ScenarioContext.java', 'Per-scenario state, injected by PicoContainer.'],
+      ['hooks/Hooks.java', '`@BeforeAll` stock replenish; `@After` attaches the request/response dump.'],
+    ],
+  },
+  {
+    name: 'shop-web-automation',
+    role: 'Web BDD suite.',
+    stack: 'playwright-bdd 9.2 &middot; Playwright 1.62 &middot; allure-playwright',
+    components: [
+      ['src/steps/', 'Assertions only.'],
+      ['src/pages/', 'Page and component objects. Interactions and waits only.'],
+      ['src/fixtures/test.ts', 'Playwright fixtures &mdash; the DI container. Must be listed in `steps`.'],
+      ['src/api/ShopApi.ts', 'Facade used only to seed state.'],
+      ['playwright.config.ts', '`bddgen` config, `missingSteps: skip-scenario`, `workers: 1`.'],
+    ],
+  },
+  {
+    name: 'shop-mobile-automation',
+    role: 'Android BDD suite.',
+    stack: 'cucumber-jvm 7.20.1 &middot; Appium java-client 9.4.0 &middot; Selenium pinned 4.26.0',
+    components: [
+      ['steps/', 'Assertions only.'],
+      ['screens/', 'Screen objects. `BaseScreen.byTestId` wraps `UiSelector.resourceId`.'],
+      ['driver/DriverManager.java', 'ThreadLocal driver factory.'],
+      ['hooks/Hooks.java', 'Clears app data per scenario; attaches screenshot, page source, logcat.'],
+    ],
+  },
+];
+
+/* ----------------------------------------------------------------- markdown */
+
+function markdown() {
+  const L = [];
+  L.push('# Shop QA Platform &mdash; Engineering Handbook');
+  L.push('');
+  L.push('> **One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.**');
+  L.push('');
+  L.push(`_Generated ${d.generated} from the live repositories and contract layer._`);
+  L.push('');
+
+  L.push('## 1. At a glance');
+  L.push('');
+  L.push(mdTable(['Metric', 'Value'], [
+    ['Repositories', '5'],
+    ['Contracts (journeys)', String(d.contracts.length)],
+    ['Scenarios', String(d.scenarios.length)],
+    ['Matrix cells covered', String(d.totals.covered)],
+    ['Open gaps', String(d.totals.gap)],
+    ['Not applicable', String(d.totals['n/a'])],
+    ['Surfaces', d.surfaces.join(', ')],
+    ['Languages', 'Java 21, TypeScript'],
+  ]));
+  L.push('');
+
+  L.push('## 2. Architecture');
+  L.push('');
+  L.push('### 2.1 System topology');
+  L.push('');
+  L.push('```mermaid');
+  L.push(DIAGRAMS.system);
+  L.push('```');
+  L.push('');
+  L.push('### 2.2 Agent orchestration');
+  L.push('');
+  L.push('```mermaid');
+  L.push(DIAGRAMS.agents);
+  L.push('```');
+  L.push('');
+  L.push('### 2.3 Closing a gap, end to end');
+  L.push('');
+  L.push('```mermaid');
+  L.push(DIAGRAMS.flow);
+  L.push('```');
+  L.push('');
+  L.push('### 2.4 Framework layering (strict)');
+  L.push('');
+  L.push('```mermaid');
+  L.push(DIAGRAMS.layering);
+  L.push('```');
+  L.push('');
+  L.push('Step definitions assert. Page/Screen/Service objects interact and wait. Neither does the other&rsquo;s job.');
+  L.push('');
+  L.push('### 2.5 Data model');
+  L.push('');
+  L.push('```mermaid');
+  L.push(DIAGRAMS.data);
+  L.push('```');
+  L.push('');
+
+  L.push('## 3. Repositories and components');
+  L.push('');
+  for (const r of REPOS) {
+    L.push(`### ${r.name}`);
+    L.push('');
+    L.push(`**Role.** ${r.role}`);
+    L.push('');
+    L.push(`**Stack.** ${r.stack}`);
+    L.push('');
+    L.push(mdTable(['Component', 'Responsibility'], r.components.map(([a, b]) => [`\`${a}\``, b])));
+    L.push('');
+  }
+
+  L.push('## 4. The contract layer');
+  L.push('');
+  L.push('Feature files live in **one place only**: `shop-qa-orchestrator/contracts/features`. No framework owns a copy.');
+  L.push('');
+  L.push('Rules that are enforced mechanically by `mcp/contract-mcp/selftest.js`:');
+  L.push('');
+  L.push('- Every scenario carries a contract id, a priority and at least one surface tag.');
+  L.push('- No step text is used as both a setup and an assertion.');
+  L.push('- The reserved gaps stay declared but unlinked.');
+  L.push('');
+  L.push('A surface tag **declares intent to cover**. An untagged surface reports `n/a`; a tagged but unlinked surface reports `gap`. That distinction is what makes `find_gaps` meaningful.');
+  L.push('');
+
+  L.push('## 5. Traceability matrix');
+  L.push('');
+  L.push(mdTable(['Contract', 'Journey', 'Scenarios', 'api', 'web', 'mobile', 'TestLink'],
+    contractRows.map((c) => [
+      `**${c.contractId}**`, c.feature, String(c.scenarioCount),
+      c.api, c.web, c.mobile, c.testlinkId ?? '&mdash;',
+    ])));
+  L.push('');
+  L.push(`**Open gaps: ${d.gaps.length}.** These are deliberate &mdash; they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live.`);
+  L.push('');
+  if (d.gaps.length) {
+    const byKey = {};
+    for (const g of d.gaps) {
+      const k = `${g.contractId} @${g.surface}`;
+      byKey[k] = (byKey[k] ?? 0) + 1;
+    }
+    L.push(mdTable(['Gap', 'Scenarios'], Object.entries(byKey).sort().map(([k, v]) => [k, String(v)])));
+    L.push('');
+  }
+
+  L.push('## 6. Test details');
+  L.push('');
+  for (const c of d.contracts) {
+    L.push(`### ${c.contractId} &mdash; ${c.feature}`);
+    L.push('');
+    L.push(`\`${c.featureFile}\` &middot; priority ${c.priority ?? '&mdash;'} &middot; TestLink ${c.testlinkId ?? '&mdash;'}`);
+    L.push('');
+    L.push(mdTable(['Scenario', 'Surfaces', 'Steps'],
+      c.scenarios.map((s) => [
+        s.name + (s.isOutline ? ` _(outline, ${s.exampleCount} examples)_` : ''),
+        s.surfaces.join(', ') || '&mdash;',
+        String(s.steps.length),
+      ])));
+    L.push('');
+  }
+
+  L.push('## 7. Running the tests');
+  L.push('');
+  L.push('### 7.1 Prerequisites');
+  L.push('');
+  L.push('| Tool | Version | Needed by |');
+  L.push('|---|---|---|');
+  L.push('| JDK | 21 (Temurin) | API + mobile suites, backend |');
+  L.push('| Node | 20+ | web suite, MCP servers |');
+  L.push('| Docker Desktop | any recent | Postgres, CI stack |');
+  L.push('| Android SDK + emulator | API 35 | mobile suite only |');
+  L.push('| Appium | 3.x + uiautomator2 | mobile suite only |');
+  L.push('');
+  L.push('Verify the JDK with `mvn -v` &mdash; it must report `Java version: 21`. A bare `java -version` can report a different JDK if the machine PATH shadows it; that is harmless because Maven and Gradle use `JAVA_HOME`.');
+  L.push('');
+  L.push('### 7.2 Start the environment');
+  L.push('');
+  L.push('**One command (Windows).** From `shop-qa-orchestrator`, start Docker Desktop and run:');
+  L.push('');
+  L.push('```powershell');
+  L.push('powershell -ExecutionPolicy Bypass -File scripts\\start-env.ps1');
+  L.push('```');
+  L.push('');
+  L.push('It starts only what is not already healthy, opens a titled window per long-running service, and waits on each health check before moving on. Re-running it is safe.');
+  L.push('');
+  L.push(mdTable(['Option', 'Effect'], START_SCRIPT_OPTIONS));
+  L.push('');
+  L.push('**Manual steps.** Run each from the Shop root. PowerShell does not accept the bash `VAR=value command` form; set `$env:VAR` first.');
+  L.push('');
+  L.push(mdTable(['Step', 'bash (macOS / Linux / CI)', 'Windows PowerShell', 'Notes'], RUN_COMMANDS));
+  L.push('');
+  L.push(EMULATOR_INPUT_NOTE);
+  L.push('');
+  L.push('**Once running:**');
+  L.push('');
+  L.push(mdTable(['What', 'URL'], LOCAL_URLS.map(([a, u]) => [a, `<${u}>`])));
+  L.push('');
+  L.push('### 7.3 Run a suite');
+  L.push('');
+  L.push(mdTable(['Suite', 'Repository', 'Command', 'Requires', 'Expected'], SUITE_COMMANDS));
+  L.push('');
+  L.push('### 7.4 Configuration');
+  L.push('');
+  L.push('Every value is env-overridable; nothing is hardcoded to localhost.');
+  L.push('');
+  L.push(mdTable(['Variable', 'Default', 'Used by'], ENV_VARS));
+  L.push('');
+  L.push('### 7.5 Filtering');
+  L.push('');
+  L.push('```bash');
+  L.push('# API: smoke only');
+  L.push('mvn -B test -Dcucumber.filter.tags="@api and @smoke"');
+  L.push('');
+  L.push('# API: one journey');
+  L.push('mvn -B test -Dcucumber.filter.tags="@api and @CHECKOUT-01"');
+  L.push('');
+  L.push('# Web: by tag');
+  L.push('npx bddgen && npx playwright test --grep @smoke');
+  L.push('```');
+  L.push('');
+  L.push('### 7.6 Exploring the API interactively');
+  L.push('');
+  L.push('The backend publishes a live OpenAPI 3 document and a Swagger UI with **Try it out** enabled, so every endpoint can be called from the browser without a REST client.');
+  L.push('');
+  L.push(mdTable(['What', 'URL'], [
+    ['Swagger UI', '`http://localhost:8081/swagger-ui.html`'],
+    ['OpenAPI JSON', '`http://localhost:8081/v3/api-docs`'],
+  ]));
+  L.push('');
+  L.push('To call a protected endpoint:');
+  L.push('');
+  L.push('1. `POST /api/auth/login` with a seeded account and copy the `token`.');
+  L.push('2. Press **Authorize**, paste the token under `bearerAuth`, confirm.');
+  L.push('3. The `X-Test-Token` scheme (`testToken`) unlocks the `/api/test-support/**` seeding endpoints; the local value is `local-test-token`.');
+  L.push('');
+  L.push('Authorisation is persisted across reloads, and the same `/v3/api-docs` document is what regenerates `packages/types` for the web and mobile apps &mdash; so the spec cannot silently drift from the code.');
+  L.push('');
+
+  L.push('## 8. Test data');
+  L.push('');
+  const users = d.fixtures.users?.users ?? {};
+  L.push(mdTable(['Key', 'Email', 'Password', 'Role'],
+    Object.entries(users).map(([k, u]) => [k, `\`${u.email}\``, `\`${u.password}\``, u.role])));
+  L.push('');
+  const cards = d.fixtures.cards?.cards ?? {};
+  L.push(mdTable(['Card', 'Number', 'Outcome'],
+    Object.entries(cards).map(([k, c]) => [k, `\`${c.number}\``, c.outcome])));
+  L.push('');
+  L.push('Coupons: `SAVE10` (10% over &#8377;5,000), `SAVE25` (25% over &#8377;50,000), `EXPIRED` (inactive).');
+  L.push('');
+  L.push(`Catalog: ${d.fixtures.products?.catalogSize ?? 12} products across ${(d.fixtures.products?.categories ?? []).join(', ')}. Prices in paise; money is never stored as a float.`);
+  L.push('');
+
+  L.push('## 9. MCP servers');
+  L.push('');
+  L.push(mdTable(['Server', 'Tools', 'Purpose'], MCP_TOOLS.map(([a, b, c]) => [`\`${a}\``, b, c])));
+  L.push('');
+  L.push('Each server ships a `smoke.js` that drives it over real JSON-RPC stdio, including an assertion that **no array parameter is missing `items`** &mdash; strict clients reject such schemas, and the failure is otherwise silent.');
+  L.push('');
+
+  L.push('## 10. Agents');
+  L.push('');
+  L.push(mdTable(['Agent', 'Owns', 'Tools'], AGENTS.map(([a, b, c]) => [`\`${a}\``, b, c])));
+  L.push('');
+  L.push('**No agent has write access to `shop-platform`.** If a test fails because the application is wrong, the agent reports it rather than editing the app.');
+  L.push('');
+  L.push('Agents cannot message each other. Coordination happens only through delegation, the shared contract files (blackboard), and MCP servers.');
+  L.push('');
+
+  L.push('## 11. Reporting');
+  L.push('');
+  L.push('Allure everywhere &mdash; the only OSS reporter with first-class adapters for both cucumber-jvm and Playwright, so three frameworks in two languages merge into one report.');
+  L.push('');
+  L.push(mdTable(['Surface', 'Attached on failure'], [
+    ['api', 'Full request/response dump (status, headers, body, timing)'],
+    ['web', 'Screenshot + Playwright trace'],
+    ['mobile', 'Screenshot + page source XML + logcat tail'],
+  ]));
+  L.push('');
+  L.push('Evidence is attached by hooks through a publisher. Step definitions never call the reporter directly.');
+  L.push('');
+
+  L.push('## 12. CI');
+  L.push('');
+  L.push('Jenkins on **:8092**, TestLink on **:8082** &mdash; deliberately different ports from the InspireFranchises stack (8080/8090) so both can run side by side.');
+  L.push('');
+  L.push('The pipeline validates the contract layer first, then runs the selected surfaces, prints the coverage matrix, and publishes one merged Allure report.');
+  L.push('');
+  L.push('Job XML must declare choice parameters as `<choices><string>` &mdash; serialising `java.util.Arrays$ArrayList` yields null choices and the job page then fails with HTTP 500.');
+  L.push('');
+
+  L.push('## 13. Traps and their fixes');
+  L.push('');
+  L.push('Every entry below cost real debugging time on this project.');
+  L.push('');
+  L.push(mdTable(['Trap', 'Symptom', 'Fix'], TRAPS));
+  L.push('');
+
+  L.push('## 14. Design standards');
+  L.push('');
+  L.push('**Patterns.** Page/Screen/Service Object &middot; Component Object &middot; Factory &middot; ThreadLocal singleton &middot; Builder &middot; Template Method &middot; Strategy &middot; Facade &middot; Dependency Injection &middot; Repository.');
+  L.push('');
+  L.push(mdTable(['SOLID', 'Enforcement here'], [
+    ['S', 'One class per page/screen/resource. Step defs hold no locators.'],
+    ['O', 'A new scenario needs a NEW step method, not edits to existing files.'],
+    ['L', 'Concrete pages usable through their abstract base.'],
+    ['I', 'Small interfaces: seedable, report publisher, test-management client.'],
+    ['D', 'Step defs depend on abstractions; the DI container wires implementations.'],
+  ]));
+  L.push('');
+  L.push('**Rejected outright:** inline locators in steps &middot; `Thread.sleep` or any fixed wait &middot; assertions in page objects &middot; static mutable state &middot; duplicated locators &middot; mechanical Gherkin &middot; editing the app to make a test pass.');
+  L.push('');
+
+  return L.join('\n');
+}
+
+/* --------------------------------------------------------------------- html */
+
+function htmlTable(headers, rows) {
+  return `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('\n')}</tbody></table>`;
+}
+
+const badge = (state) => {
+  const cls = state === 'covered' ? 'ok' : state === 'GAP' ? 'gap' : 'na';
+  return `<span class="badge ${cls}">${state}</span>`;
+};
+
+function mermaidBlock(def) {
+  return `<div class="mermaid">${esc(def)}</div>`;
+}
+
+function html() {
+  const nav = [
+    ['glance', '1. At a glance'],
+    ['architecture', '2. Architecture'],
+    ['repositories', '3. Repositories'],
+    ['contracts', '4. Contract layer'],
+    ['matrix', '5. Traceability matrix'],
+    ['tests', '6. Test details'],
+    ['running', '7. Running the tests'],
+    ['data', '8. Test data'],
+    ['mcp', '9. MCP servers'],
+    ['agents', '10. Agents'],
+    ['reporting', '11. Reporting'],
+    ['ci', '12. CI'],
+    ['traps', '13. Traps'],
+    ['standards', '14. Design standards'],
+  ];
+
+  const users = d.fixtures.users?.users ?? {};
+  const cards = d.fixtures.cards?.cards ?? {};
+
+  const gapRows = (() => {
+    const byKey = {};
+    for (const g of d.gaps) {
+      const k = `${g.contractId} @${g.surface}`;
+      byKey[k] = (byKey[k] ?? 0) + 1;
+    }
+    return Object.entries(byKey).sort().map(([k, v]) => [`<code>${k}</code>`, String(v)]);
+  })();
+
+  const mermaidSrc = (() => {
+    const cached = join(OUT, 'mermaid.min.js');
+    return existsSync(cached) ? readFileSync(cached, 'utf8') : null;
+  })();
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop QA Platform &mdash; Engineering Handbook</title>
+<style>
+:root{--bg:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d1d9e0;--accent:#0969da;
+--ok-bg:#dafbe1;--ok-fg:#116329;--gap-bg:#fff1e5;--gap-fg:#953800;--na-bg:#eef1f4;--na-fg:#656d76;
+--code-bg:#f6f8fa;--sidebar:#f6f8fa;}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#3d444d;
+--accent:#4493f8;--ok-bg:#0f2f1a;--ok-fg:#3fb950;--gap-bg:#3a2410;--gap-fg:#db8f4a;
+--na-bg:#21262d;--na-fg:#9198a1;--code-bg:#161b22;--sidebar:#161b22;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+#layout{display:flex;min-height:100vh}
+#sidebar{width:290px;flex:0 0 290px;background:var(--sidebar);border-right:1px solid var(--line);
+padding:22px 18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+#sidebar h1{font-size:15px;margin:0 0 4px}
+#sidebar .sub{color:var(--muted);font-size:12px;margin-bottom:16px}
+#search{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:6px;
+background:var(--bg);color:var(--fg);margin-bottom:14px;font-size:13px}
+#nav a{display:block;padding:5px 9px;border-radius:6px;color:var(--fg);text-decoration:none;font-size:13px}
+#nav a:hover{background:var(--line)}
+#nav a.active{background:var(--accent);color:#fff}
+main{flex:1;padding:34px 46px;max-width:1180px;min-width:0}
+h2{border-bottom:1px solid var(--line);padding-bottom:7px;margin-top:44px;font-size:24px}
+h3{margin-top:28px;font-size:18px}
+h4{margin-top:20px;font-size:15px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600;white-space:nowrap}
+code{background:var(--code-bg);padding:1.5px 5px;border-radius:5px;font-size:12.5px;
+font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code-bg);padding:13px 15px;border-radius:7px;overflow-x:auto;font-size:12.5px}
+pre code{background:none;padding:0}
+blockquote{border-left:4px solid var(--accent);margin:16px 0;padding:2px 16px;color:var(--muted)}
+.badge{display:inline-block;padding:1px 9px;border-radius:11px;font-size:11.5px;font-weight:600}
+.badge.ok{background:var(--ok-bg);color:var(--ok-fg)}
+.badge.gap{background:var(--gap-bg);color:var(--gap-fg)}
+.badge.na{background:var(--na-bg);color:var(--na-fg)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin:18px 0}
+.card{border:1px solid var(--line);border-radius:9px;padding:14px}
+.card .n{font-size:27px;font-weight:700;color:var(--accent)}
+.card .l{color:var(--muted);font-size:12.5px;margin-top:2px}
+.mermaid{background:var(--code-bg);border:1px solid var(--line);border-radius:9px;
+padding:18px;margin:18px 0;text-align:center;overflow-x:auto}
+details{border:1px solid var(--line);border-radius:7px;padding:11px 14px;margin:9px 0}
+summary{cursor:pointer;font-weight:600}
+.note{background:var(--gap-bg);color:var(--gap-fg);border-radius:7px;padding:12px 15px;margin:16px 0}
+.hidden{display:none}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+@media print{
+  #sidebar{display:none} main{padding:0;max-width:none}
+  h2{page-break-after:avoid} table,.mermaid,details{page-break-inside:avoid}
+  details{border:none;padding:0} details>summary{list-style:none}
+}
+</style>
+</head>
+<body>
+<div id="layout">
+<aside id="sidebar">
+  <h1>Shop QA Platform</h1>
+  <div class="sub">Engineering Handbook</div>
+  <input id="search" type="search" placeholder="Filter sections&hellip;" aria-label="Filter sections">
+  <nav id="nav">${nav.map(([id, label]) => `<a href="#${id}" data-target="${id}">${label}</a>`).join('')}</nav>
+</aside>
+<main>
+
+<h1>Shop QA Platform &mdash; Engineering Handbook</h1>
+<blockquote>One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.</blockquote>
+<p style="color:var(--muted);font-size:13px">Generated ${d.generated} from the live repositories and contract layer.</p>
+
+<section id="glance">
+<h2>1. At a glance</h2>
+<div class="cards">
+  <div class="card"><div class="n">5</div><div class="l">Repositories</div></div>
+  <div class="card"><div class="n">${d.contracts.length}</div><div class="l">Contracts</div></div>
+  <div class="card"><div class="n">${d.scenarios.length}</div><div class="l">Scenarios</div></div>
+  <div class="card"><div class="n">${d.totals.covered}</div><div class="l">Cells covered</div></div>
+  <div class="card"><div class="n">${d.totals.gap}</div><div class="l">Open gaps</div></div>
+  <div class="card"><div class="n">3</div><div class="l">Surfaces</div></div>
+</div>
+<p>Three test frameworks in two languages drive one application across three surfaces, all from a single set of feature files. Coverage is tracked in a requirements traceability matrix that agents can query, and the gaps in it are the work queue.</p>
+</section>
+
+<section id="architecture">
+<h2>2. Architecture</h2>
+<h3>2.1 System topology</h3>
+${mermaidBlock(DIAGRAMS.system)}
+<h3>2.2 Agent orchestration</h3>
+${mermaidBlock(DIAGRAMS.agents)}
+<h3>2.3 Closing a gap, end to end</h3>
+${mermaidBlock(DIAGRAMS.flow)}
+<h3>2.4 Framework layering (strict)</h3>
+${mermaidBlock(DIAGRAMS.layering)}
+<p>Step definitions assert. Page, Screen and Service objects interact and wait. Neither does the other&rsquo;s job.</p>
+<h3>2.5 Data model</h3>
+${mermaidBlock(DIAGRAMS.data)}
+</section>
+
+<section id="repositories">
+<h2>3. Repositories and components</h2>
+${REPOS.map((r) => `
+<h3>${r.name}</h3>
+<p><strong>Role.</strong> ${r.role}</p>
+<p><strong>Stack.</strong> ${r.stack}</p>
+${htmlTable(['Component', 'Responsibility'], r.components.map(([a, b]) => [`<code>${a}</code>`, b]))}
+`).join('')}
+</section>
+
+<section id="contracts">
+<h2>4. The contract layer</h2>
+<p>Feature files live in <strong>one place only</strong>: <code>shop-qa-orchestrator/contracts/features</code>. No framework owns a copy.</p>
+<p>Rules enforced mechanically by <code>mcp/contract-mcp/selftest.js</code>:</p>
+<ul>
+<li>Every scenario carries a contract id, a priority and at least one surface tag.</li>
+<li>No step text is used as both a setup and an assertion.</li>
+<li>The reserved gaps stay declared but unlinked.</li>
+</ul>
+<div class="note"><strong>The distinction that makes it work.</strong> A surface tag <em>declares intent to cover</em>.
+An untagged surface reports <code>n/a</code>; a tagged but unlinked surface reports <code>gap</code>.
+Without that difference, <code>find_gaps</code> returns nothing and the orchestration demo has no work to do.</div>
+</section>
+
+<section id="matrix">
+<h2>5. Traceability matrix</h2>
+${htmlTable(['Contract', 'Journey', 'Scenarios', 'api', 'web', 'mobile', 'TestLink'],
+    contractRows.map((c) => [
+      `<strong>${c.contractId}</strong>`, c.feature, String(c.scenarioCount),
+      badge(c.api), badge(c.web), badge(c.mobile), `<code>${c.testlinkId ?? '&mdash;'}</code>`,
+    ]))}
+<h3>Open gaps</h3>
+<p>${d.gaps.length} gaps remain. These are deliberate: they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live on stage.</p>
+${htmlTable(['Gap', 'Scenarios'], gapRows)}
+</section>
+
+<section id="tests">
+<h2>6. Test details</h2>
+${d.contracts.map((c) => `
+<details>
+<summary>${c.contractId} &mdash; ${c.feature} <span style="color:var(--muted);font-weight:400">(${c.scenarios.length} scenarios)</span></summary>
+<p><code>${c.featureFile}</code> &middot; priority ${c.priority ?? '&mdash;'} &middot; TestLink <code>${c.testlinkId ?? '&mdash;'}</code></p>
+${htmlTable(['Scenario', 'Surfaces', 'Steps'], c.scenarios.map((s) => [
+      esc(s.name) + (s.isOutline ? ` <em>(outline, ${s.exampleCount} examples)</em>` : ''),
+      s.surfaces.map((x) => `<code>@${x}</code>`).join(' ') || '&mdash;',
+      String(s.steps.length),
+    ]))}
+<h4>Steps</h4>
+<pre><code>${esc([...new Set(c.scenarios.flatMap((s) => [...s.backgroundSteps, ...s.steps]))].join('\n'))}</code></pre>
+</details>`).join('')}
+</section>
+
+<section id="running">
+<h2>7. Running the tests</h2>
+<h3>7.1 Prerequisites</h3>
+${htmlTable(['Tool', 'Version', 'Needed by'], [
+      ['JDK', '21 (Temurin)', 'API + mobile suites, backend'],
+      ['Node', '20+', 'web suite, MCP servers'],
+      ['Docker Desktop', 'any recent', 'Postgres, CI stack'],
+      ['Android SDK + emulator', 'API 35', 'mobile suite only'],
+      ['Appium', '3.x + uiautomator2', 'mobile suite only'],
+    ])}
+<div class="note">Verify the JDK with <code>mvn -v</code> &mdash; it must report <code>Java version: 21</code>.
+A bare <code>java -version</code> can report a different JDK when the machine PATH shadows it; that is harmless,
+because Maven and Gradle use <code>JAVA_HOME</code>.</div>
+<h3>7.2 Start the environment</h3>
+<p><strong>One command (Windows).</strong> From <code>shop-qa-orchestrator</code>, start Docker Desktop and run:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File scripts\\start-env.ps1</code></pre>
+<p>It starts only what is not already healthy, opens a titled window per long-running service, and waits on each health check before moving on. Re-running it is safe.</p>
+${htmlTable(['Option', 'Effect'], START_SCRIPT_OPTIONS.map((r) => r.map((c) => esc(c).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/_\(([^)]+)\)_/g, '<em>($1)</em>'))))}
+<p><strong>Manual steps.</strong> Run each from the Shop root. PowerShell does not accept the bash <code>VAR=value command</code> form; set <code>$env:VAR</code> first.</p>
+${htmlTable(['Step', 'bash (macOS / Linux / CI)', 'Windows PowerShell', 'Notes'], RUN_COMMANDS.map((r) => r.map((c) => c.replace(/`([^`]+)`/g, '<code>$1</code>'))))}
+<div class="note">${EMULATOR_INPUT_NOTE.replace(/`([^`]+)`/g, '<code>$1</code>')}</div>
+<p><strong>Once running:</strong></p>
+${htmlTable(['What', 'URL'], LOCAL_URLS.map(([a, u]) => [a, `<a href="${u}">${u}</a>`]))}
+<h3>7.3 Run a suite</h3>
+${htmlTable(['Suite', 'Repository', 'Command', 'Requires', 'Expected'], SUITE_COMMANDS.map((r) => r.map((c) => c.replace(/`([^`]+)`/g, '<code>$1</code>'))))}
+<h3>7.4 Configuration</h3>
+<p>Every value is env-overridable; nothing is hardcoded to localhost.</p>
+${htmlTable(['Variable', 'Default', 'Used by'], ENV_VARS.map((r) => r.map((c) => c.replace(/`([^`]+)`/g, '<code>$1</code>'))))}
+<h3>7.5 Filtering</h3>
+<pre><code># API: smoke only
+mvn -B test -Dcucumber.filter.tags="@api and @smoke"
+
+# API: one journey
+mvn -B test -Dcucumber.filter.tags="@api and @CHECKOUT-01"
+
+# Web: by tag
+npx bddgen &amp;&amp; npx playwright test --grep @smoke</code></pre>
+<h3>7.6 Exploring the API interactively</h3>
+<p>The backend publishes a live OpenAPI 3 document and a Swagger UI with <strong>Try it out</strong> enabled, so every endpoint can be called from the browser without a REST client.</p>
+${htmlTable(['What', 'URL'], [
+      ['Swagger UI', '<a href="http://localhost:8081/swagger-ui.html">http://localhost:8081/swagger-ui.html</a>'],
+      ['OpenAPI JSON', '<a href="http://localhost:8081/v3/api-docs">http://localhost:8081/v3/api-docs</a>'],
+    ])}
+<p>To call a protected endpoint:</p>
+<ol>
+<li><code>POST /api/auth/login</code> with a seeded account and copy the <code>token</code>.</li>
+<li>Press <strong>Authorize</strong>, paste the token under <code>bearerAuth</code>, confirm.</li>
+<li>The <code>X-Test-Token</code> scheme (<code>testToken</code>) unlocks the <code>/api/test-support/**</code> seeding endpoints; the local value is <code>local-test-token</code>.</li>
+</ol>
+<p>Authorisation is persisted across reloads, and the same <code>/v3/api-docs</code> document is what regenerates <code>packages/types</code> for the web and mobile apps &mdash; so the spec cannot silently drift from the code.</p>
+</section>
+
+<section id="data">
+<h2>8. Test data</h2>
+<p>All test data comes from <code>contracts/fixtures</code>. A literal email, password, price or card number in a step definition is a defect.</p>
+<h3>Seeded accounts</h3>
+${htmlTable(['Key', 'Email', 'Password', 'Role'],
+      Object.entries(users).map(([k, u]) => [`<code>${k}</code>`, `<code>${u.email}</code>`, `<code>${u.password}</code>`, u.role]))}
+<h3>Payment cards</h3>
+${htmlTable(['Card', 'Number', 'Outcome'],
+      Object.entries(cards).map(([k, c]) => [`<code>${k}</code>`, `<code>${c.number}</code>`, c.outcome]))}
+<p>Any future expiry, any three-digit CVC. The gateway routes on card number alone and is fully deterministic.</p>
+<h3>Coupons</h3>
+${htmlTable(['Code', 'Discount', 'Condition'], [
+      ['<code>SAVE10</code>', '10%', 'Orders over &#8377;5,000'],
+      ['<code>SAVE25</code>', '25%', 'Orders over &#8377;50,000'],
+      ['<code>EXPIRED</code>', '50%', 'Inactive &mdash; always refused'],
+    ])}
+<p>Catalog: ${d.fixtures.products?.catalogSize ?? 12} products across ${(d.fixtures.products?.categories ?? []).join(', ')}.
+Prices are stored in <strong>paise</strong>; money is never a float.</p>
+</section>
+
+<section id="mcp">
+<h2>9. MCP servers</h2>
+${htmlTable(['Server', 'Tools', 'Purpose'], MCP_TOOLS.map(([a, b, c]) => [`<code>${a}</code>`, b, c]))}
+<div class="note">Each server ships a <code>smoke.js</code> that drives it over real JSON-RPC stdio &mdash; including an
+assertion that <strong>no array parameter is missing <code>items</code></strong>. Strict clients reject such schemas,
+and the failure is otherwise silent.</div>
+</section>
+
+<section id="agents">
+<h2>10. Agents</h2>
+${htmlTable(['Agent', 'Owns', 'Tools'], AGENTS.map(([a, b, c]) => [`<code>${a}</code>`, b, `<code>${c}</code>`]))}
+<div class="note"><strong>No agent has write access to <code>shop-platform</code>.</strong>
+If a test fails because the application is wrong, the agent reports it rather than editing the app.</div>
+<p>Agents cannot message each other. Coordination happens only through delegation, the shared contract files
+(a blackboard architecture), and MCP servers.</p>
+<h3>Delegation brief</h3>
+<pre><code>CONTRACT:      CHECKOUT-01
+SCENARIOS:     Pay with an approved card
+SURFACE:       web
+TARGET REPO:   shop-web-automation
+FIXTURES:      users.demo, cards.approved
+PRECONDITIONS: seed cart via shop-app MCP
+DELIVERABLES:  step definitions + green local run + link_implementation
+
+REPORT BACK (machine-parseable, required):
+  files_created: []
+  files_modified: []
+  contract_id: ""
+  scenarios: []
+  local_result: pass | fail
+  failure_reason: ""
+  app_bug_suspected: true | false</code></pre>
+</section>
+
+<section id="reporting">
+<h2>11. Reporting</h2>
+<p>Allure everywhere &mdash; the only OSS reporter with first-class adapters for both cucumber-jvm and Playwright,
+so three frameworks in two languages merge into a single report.</p>
+${htmlTable(['Surface', 'Attached on failure'], [
+      ['<code>api</code>', 'Full request/response dump (status, headers, body, timing)'],
+      ['<code>web</code>', 'Screenshot + Playwright trace'],
+      ['<code>mobile</code>', 'Screenshot + page source XML + logcat tail'],
+    ])}
+<p>Evidence is attached by hooks through a publisher. Step definitions never call the reporter directly.</p>
+<pre><code>pwsh shop-qa-orchestrator/scripts/merge-allure.ps1 -Open</code></pre>
+</section>
+
+<section id="ci">
+<h2>12. CI</h2>
+<p>Jenkins on <strong>:8092</strong>, TestLink on <strong>:8082</strong> &mdash; deliberately different ports from the
+InspireFranchises stack (8080/8090) so both can run side by side.</p>
+<p>The pipeline validates the contract layer first, then runs the selected surfaces, prints the coverage matrix,
+and publishes one merged Allure report.</p>
+<div class="note">Job XML must declare choice parameters as <code>&lt;choices&gt;&lt;string&gt;</code>.
+Serialising <code>java.util.Arrays$ArrayList</code> yields null choices and the job page then fails with HTTP 500.</div>
+<pre><code>cd shop-qa-orchestrator/ci
+docker compose up -d          # Jenkins :8092, TestLink :8082</code></pre>
+</section>
+
+<section id="traps">
+<h2>13. Traps and their fixes</h2>
+<p>Every entry below cost real debugging time on this project. They are also encoded in the agent instruction
+files so specialists do not rediscover them.</p>
+${htmlTable(['Trap', 'Symptom', 'Fix'], TRAPS.map(([a, b, c]) => [`<strong>${a}</strong>`, b, c]))}
+</section>
+
+<section id="standards">
+<h2>14. Design standards</h2>
+<p><strong>Patterns.</strong> Page/Screen/Service Object &middot; Component Object &middot; Factory &middot;
+ThreadLocal singleton &middot; Builder &middot; Template Method &middot; Strategy &middot; Facade &middot;
+Dependency Injection &middot; Repository.</p>
+${htmlTable(['SOLID', 'Enforcement here'], [
+      ['<strong>S</strong>', 'One class per page/screen/resource. Step defs hold no locators.'],
+      ['<strong>O</strong>', 'A new scenario needs a NEW step method, not edits to existing files.'],
+      ['<strong>L</strong>', 'Concrete pages usable through their abstract base.'],
+      ['<strong>I</strong>', 'Small interfaces: seedable, report publisher, test-management client.'],
+      ['<strong>D</strong>', 'Step defs depend on abstractions; the DI container wires implementations.'],
+    ])}
+<h3>Rejected outright</h3>
+<p>Inline locators in steps &middot; <code>Thread.sleep</code> or any fixed wait &middot; assertions in page objects &middot;
+static mutable state &middot; duplicated locators &middot; mechanical Gherkin &middot; editing the app to make a test pass.</p>
+<h3>Definition of done for a scenario</h3>
+<ol>
+<li>Step definitions written in the correct layer.</li>
+<li>Suite run locally and green.</li>
+<li><code>link_implementation</code> called on the contract MCP.</li>
+<li><code>get_coverage_matrix</code> shows the cell as covered.</li>
+</ol>
+</section>
+
+<footer>Shop QA Platform handbook &middot; generated ${d.generated} &middot; regenerate with
+<code>node mcp/contract-mcp/generate-docs.mjs</code></footer>
+</main>
+</div>
+
+${mermaidSrc ? `<script>${mermaidSrc}</script>` : '<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>'}
+<script>
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+  }
+
+  // Highlight the section currently in view.
+  const links = [...document.querySelectorAll('#nav a')];
+  const observer = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      links.forEach((l) => l.classList.toggle('active', l.dataset.target === e.target.id));
+    }
+  }, { rootMargin: '-15% 0px -75% 0px' });
+  document.querySelectorAll('main section').forEach((s) => observer.observe(s));
+
+  // Filter sections by free text.
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('main section').forEach((s) => {
+      const hit = !q || s.textContent.toLowerCase().includes(q);
+      s.classList.toggle('hidden', !hit);
+      const link = links.find((l) => l.dataset.target === s.id);
+      if (link) link.classList.toggle('hidden', !hit);
+    });
+  });
+</script>
+</body>
+</html>`;
+}
+
+/* -------------------------------------------------------------------- write */
+
+const md = markdown();
+writeFileSync(join(OUT, 'shop-qa-handbook.md'), md, 'utf8');
+console.log(`markdown -> ${join(OUT, 'shop-qa-handbook.md')} (${(md.length / 1024).toFixed(1)} KB)`);
+
+const page = html();
+writeFileSync(join(OUT, 'shop-qa-handbook.html'), page, 'utf8');
+console.log(`html     -> ${join(OUT, 'shop-qa-handbook.html')} (${(page.length / 1024).toFixed(1)} KB)`);
+
+console.log(`\ncontracts: ${d.contracts.length}  scenarios: ${d.scenarios.length}  ` +
+  `covered: ${d.totals.covered}  gaps: ${d.totals.gap}  n/a: ${d.totals['n/a']}`);

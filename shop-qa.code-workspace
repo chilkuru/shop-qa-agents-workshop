@@ -1,0 +1,18 @@
+{
+  "folders": [
+    { "name": "shop-platform (SUT — read-only for agents)", "path": "shop-platform" },
+    { "name": "shop-qa-orchestrator", "path": "shop-qa-orchestrator" },
+    { "name": "shop-api-automation", "path": "shop-api-automation" },
+    { "name": "shop-web-automation", "path": "shop-web-automation" },
+    { "name": "shop-mobile-automation", "path": "shop-mobile-automation" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/target": true,
+      "**/node_modules": true,
+      "**/.gradle": true,
+      "**/android/app/build": true
+    },
+    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable"
+  }
+}
