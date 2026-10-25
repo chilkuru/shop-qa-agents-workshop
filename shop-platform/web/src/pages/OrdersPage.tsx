@@ -15,14 +15,14 @@ export function OrdersPage() {
       {!orders || orders.length === 0 ? (
         <p data-testid="orders-empty">You have no orders yet.</p>
       ) : (
-        <ul data-testid="orders-list">
+        <ul className="order-list" data-testid="orders-list">
           {orders.map((order) => (
             <li key={order.orderNumber} data-testid={`order-row-${order.orderNumber}`}>
               <Link to={`/confirmation/${order.orderNumber}`} data-testid={`order-link-${order.orderNumber}`}>
                 {order.orderNumber}
               </Link>
-              <span data-testid={`order-status-${order.orderNumber}`}>{order.status}</span>
-              <span data-testid={`order-total-${order.orderNumber}`}>
+              <span className="order-status" data-testid={`order-status-${order.orderNumber}`}>{order.status}</span>
+              <span className="order-total" data-testid={`order-total-${order.orderNumber}`}>
                 {formatPaise(order.totalPaise ?? 0)}
               </span>
             </li>
