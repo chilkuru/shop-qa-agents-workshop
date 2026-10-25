@@ -2,7 +2,7 @@
 
 > **One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.**
 
-_Generated 2026-10-21T03:57:15.985Z from the live repositories and contract layer._
+_Generated 2026-10-25T13:45:28.309Z from the live repositories and contract layer._
 
 ## 1. At a glance
 
@@ -11,8 +11,8 @@ _Generated 2026-10-21T03:57:15.985Z from the live repositories and contract laye
 | Repositories | 5 |
 | Contracts (journeys) | 12 |
 | Scenarios | 48 |
-| Matrix cells covered | 117 |
-| Open gaps | 8 |
+| Matrix cells covered | 119 |
+| Open gaps | 6 |
 | Not applicable | 19 |
 | Surfaces | api, web, mobile |
 | Languages | Java 21, TypeScript |
@@ -118,7 +118,7 @@ sequenceDiagram
 
     H->>O: Close the web checkout gap
     O->>C: get_coverage_matrix
-    C-->>O: 117 covered, 8 gaps
+    C-->>O: 119 covered, 6 gaps
     O->>C: find_gaps surface=web
     C-->>O: CHECKOUT-01, 2 scenarios
     O->>C: get_scenario
@@ -202,6 +202,7 @@ erDiagram
 | `.github/agents/` | Five agent definitions. |
 | `ci/` | Jenkins pipeline + job XML, TestLink compose. |
 | `scripts/merge-allure.ps1` | Merges three surfaces into one Allure report. |
+| `scripts/start-env.ps1` | Checks prerequisites, starts the Docker stack, emulator and Appium, and installs the released APK. |
 
 ### shop-api-automation
 
@@ -274,11 +275,11 @@ A surface tag **declares intent to cover**. An untagged surface reports `n/a`; a
 | **REVIEWS-01** | Reviewing a product | 4 | covered | covered | covered | SHOP-11 |
 | **WISHLIST-01** | Saving products for later | 4 | covered | covered | covered | SHOP-8 |
 
-**Open gaps: 8.** These are deliberate &mdash; they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live.
+**Open gaps: 6.** These are deliberate &mdash; they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live.
 
 | Gap | Scenarios |
 |---|---|
-| CART-01 @mobile | 4 |
+| CART-01 @mobile | 2 |
 | CHECKOUT-01 @mobile | 2 |
 | CHECKOUT-01 @web | 2 |
 
@@ -424,9 +425,11 @@ A surface tag **declares intent to cover**. An untagged surface reports `n/a`; a
 |---|---|---|
 | JDK | 21 (Temurin) | API + mobile suites, backend |
 | Node | 20+ | web suite, MCP servers |
-| Docker Desktop | any recent | Postgres, CI stack |
+| Docker Desktop | any recent | Docker stack (Postgres, backend, web), CI |
 | Android SDK + emulator | API 35 | mobile suite only |
 | Appium | 3.x + uiautomator2 | mobile suite only |
+
+`start-env.ps1` checks these first and lists everything that is missing, with where to get it. Docker, `adb`, the emulator, Appium and its `uiautomator2` driver are required (the last four unless you pass `-SkipMobile`). JDK 21, Maven and Node 20+ only produce a warning, because the Docker stack does not need them; they are needed to run the suites, and are required with `-Native`.
 
 Verify the JDK with `mvn -v` &mdash; it must report `Java version: 21`. A bare `java -version` can report a different JDK if the machine PATH shadows it; that is harmless because Maven and Gradle use `JAVA_HOME`.
 
@@ -438,25 +441,31 @@ Verify the JDK with `mvn -v` &mdash; it must report `Java version: 21`. A bare `
 powershell -ExecutionPolicy Bypass -File scripts\start-env.ps1
 ```
 
-It starts only what is not already healthy, opens a titled window per long-running service, and waits on each health check before moving on. Re-running it is safe.
+It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root `docker-compose.yml`, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.
 
 | Option | Effect |
 |---|---|
-| _(none)_ | Postgres, backend, web, emulator, Appium; builds the APK only if missing |
-| `-SkipMobile` | Postgres, backend and web only |
-| `-BuildApk` | Always rebuild the release APK |
+| _(none)_ | Docker stack (Postgres, backend, web), emulator, Appium; downloads and installs the released APK if the app is not on the emulator |
+| `-SkipMobile` | Docker stack only: no emulator, Appium or APK |
+| `-Native` | Run backend and web from source instead of Docker (needs JDK 21, Maven, and `npm ci` in `shop-platform/web`) |
+| `-BuildApk` | Build the release APK with Gradle instead of downloading it (needs the generated `android/` folder) |
+| `-ReinstallApk` | Install the APK even if `com.shop.mobile` is already on the emulator |
 | `-Avd <name>` | Use a different AVD (default `shop_test`) |
+
+**Docker stack only.** From the repo root, `docker compose up -d --build` starts Postgres, the backend (:8081) and the web app (:5173); `docker compose down` stops it (`-v` also wipes the database). Every credential in the compose file is a demo value for local use only. The repo root also holds `docker/web.Dockerfile` and a `README.md` quick start.
 
 **Manual steps.** Run each from the Shop root. PowerShell does not accept the bash `VAR=value command` form; set `$env:VAR` first.
 
 | Step | bash (macOS / Linux / CI) | Windows PowerShell | Notes |
 |---|---|---|---|
-| Postgres | `cd shop-platform && docker compose up -d postgres` | `cd shop-platform; docker compose up -d postgres` | Docker Desktop must be running |
-| Backend | `cd shop-platform/backend && SPRING_PROFILES_ACTIVE=test mvn spring-boot:run` | `cd shop-platform\backend; $env:SPRING_PROFILES_ACTIVE="test"; mvn spring-boot:run` | Serves :8081; Flyway migrates on start |
-| Web app | `cd shop-platform/web && VITE_API_BASE_URL=http://localhost:8081 npx vite dev --port 5173` | `cd shop-platform\web; $env:VITE_API_BASE_URL="http://localhost:8081"; npx vite dev --port 5173` | Serves :5173 |
+| Stack (Docker, default) | `docker compose up -d --build` | `docker compose up -d --build` | Run from the repo root. Postgres + backend + web; web :5173, API :8081. `docker compose down` stops it (`-v` wipes the database) |
+| Postgres (native) | `cd shop-platform && docker compose up -d postgres` | `cd shop-platform; docker compose up -d postgres` | Only for `-Native`. Docker Desktop must be running |
+| Backend (native) | `cd shop-platform/backend && SPRING_PROFILES_ACTIVE=test mvn spring-boot:run` | `cd shop-platform\backend; $env:SPRING_PROFILES_ACTIVE="test"; mvn spring-boot:run` | Serves :8081; Flyway migrates on start |
+| Web app (native) | `cd shop-platform/web && VITE_API_BASE_URL=http://localhost:8081 npx vite dev --port 5173` | `cd shop-platform\web; $env:VITE_API_BASE_URL="http://localhost:8081"; npx vite dev --port 5173` | Serves :5173 |
 | Emulator | `emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect` | `emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect` | Then poll `adb shell getprop sys.boot_completed` until `1` |
 | Appium | `appium --port 4723` | `appium --port 4723` | Required by the mobile suite only |
-| Mobile APK | `cd shop-platform/mobile/android && NODE_ENV=production ./gradlew assembleRelease` | `cd shop-platform\mobile\android; $env:NODE_ENV="production"; .\gradlew.bat assembleRelease` | Release only &mdash; a debug APK renders an empty shell |
+| Mobile APK (released) | Download `app-release.apk` from the repo&rsquo;s GitHub Releases page, then `adb install -r app-release.apk` | Download `app-release.apk` from the repo&rsquo;s GitHub Releases page, then `adb install -r app-release.apk` | Package `com.shop.mobile`. `start-env.ps1` does this and checks the SHA-256 |
+| Mobile APK (build) | `cd shop-platform/mobile/android && NODE_ENV=production ./gradlew assembleRelease` | `cd shop-platform\mobile\android; $env:NODE_ENV="production"; .\gradlew.bat assembleRelease` | Release only &mdash; a debug APK renders an empty shell. The `android/` folder is generated by `npx expo prebuild --platform android`, not stored in the repo |
 
 If you cannot type into the emulator with the PC keyboard, the AVD has `hw.keyboard = no` in `%USERPROFILE%\.android\avd\shop_test.avd\config.ini`. Set it to `yes` and cold boot (`adb emu kill`, then start with `-no-snapshot-load`). If clicking a field shows a small floating toolbar instead of the keyboard, run `adb shell settings put secure stylus_handwriting_enabled 0`. `start-env.ps1` applies both.
 
@@ -475,8 +484,8 @@ If you cannot type into the emulator with the PC keyboard, the AVD has `hw.keybo
 | Suite | Repository | Command | Requires | Expected |
 |---|---|---|---|---|
 | API | shop-api-automation | `mvn -B test` | backend :8081 | 51 scenarios |
-| Web | shop-web-automation | `npx bddgen && npx playwright test` | web :5173 + backend | 21 passed, 2 skipped |
-| Mobile | shop-mobile-automation | `mvn -B test` | emulator + Appium + backend | 17 scenarios |
+| Web | shop-web-automation | `npx bddgen && npx playwright test` | web :5173 + backend | 40 passed, 2 skipped |
+| Mobile | shop-mobile-automation | `mvn -B test` | emulator + Appium + backend | 37 scenarios |
 | Merged report | shop-qa-orchestrator | `pwsh scripts/merge-allure.ps1` | any suite already run | one Allure report |
 
 ### 7.4 Configuration
@@ -603,6 +612,9 @@ Every entry below cost real debugging time on this project.
 | Stock is consumed permanently | Every checkout decrements stock, so a repeatable suite eventually starves. | `@BeforeAll` replenishes the catalog through the admin API. |
 | Shared demo account | Parallel web workers interleave cart and order state for the same user. | Web suite runs `workers: 1`. |
 | PowerShell corrupts binaries | `adb exec-out screencap -p > file.png` re-encodes and yields an invalid PNG. | `adb shell screencap` then `adb pull`. |
+| Git does not track empty folders | A Dockerfile that copies an empty folder (`web/public`) builds on the author&rsquo;s machine but fails on a fresh clone with &ldquo;not found&rdquo;. | Never `COPY` a folder that may be empty. Test the Docker build from a fresh clone, not the working copy. |
+| Windows line endings can break scripts in containers | With `core.autocrlf`, a Windows checkout can turn `mvnw` into CRLF, and the backend image build then fails with &ldquo;bad interpreter&rdquo;. | `.gitattributes` pins `mvnw`, `gradlew` and Dockerfiles to LF. |
+| One dead Appium session fails everything after it | When the emulator or UiAutomator2 hangs, every later scenario reports `Session ID is null` or a request timeout, which looks like many unrelated failures. | Look at the FIRST broken scenario. Restart the emulator and Appium, then re-run before investigating the app. |
 
 ## 14. Design standards
 

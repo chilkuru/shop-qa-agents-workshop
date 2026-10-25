@@ -70,7 +70,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 
 <h1>Shop QA Platform &mdash; Engineering Handbook</h1>
 <blockquote>One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.</blockquote>
-<p style="color:var(--muted);font-size:13px">Generated 2026-10-21T03:57:15.985Z from the live repositories and contract layer.</p>
+<p style="color:var(--muted);font-size:13px">Generated 2026-10-25T13:45:28.309Z from the live repositories and contract layer.</p>
 
 <section id="glance">
 <h2>1. At a glance</h2>
@@ -78,8 +78,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
   <div class="card"><div class="n">5</div><div class="l">Repositories</div></div>
   <div class="card"><div class="n">12</div><div class="l">Contracts</div></div>
   <div class="card"><div class="n">48</div><div class="l">Scenarios</div></div>
-  <div class="card"><div class="n">117</div><div class="l">Cells covered</div></div>
-  <div class="card"><div class="n">8</div><div class="l">Open gaps</div></div>
+  <div class="card"><div class="n">119</div><div class="l">Cells covered</div></div>
+  <div class="card"><div class="n">6</div><div class="l">Open gaps</div></div>
   <div class="card"><div class="n">3</div><div class="l">Surfaces</div></div>
 </div>
 <p>Three test frameworks in two languages drive one application across three surfaces, all from a single set of feature files. Coverage is tracked in a requirements traceability matrix that agents can query, and the gaps in it are the work queue.</p>
@@ -176,7 +176,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 
     H-&gt;&gt;O: Close the web checkout gap
     O-&gt;&gt;C: get_coverage_matrix
-    C--&gt;&gt;O: 117 covered, 8 gaps
+    C--&gt;&gt;O: 119 covered, 6 gaps
     O-&gt;&gt;C: find_gaps surface=web
     C--&gt;&gt;O: CHECKOUT-01, 2 scenarios
     O-&gt;&gt;C: get_scenario
@@ -243,7 +243,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 <tr><td><code>mcp/android-mcp/</code></td><td>Emulator lifecycle MCP.</td></tr>
 <tr><td><code>.github/agents/</code></td><td>Five agent definitions.</td></tr>
 <tr><td><code>ci/</code></td><td>Jenkins pipeline + job XML, TestLink compose.</td></tr>
-<tr><td><code>scripts/merge-allure.ps1</code></td><td>Merges three surfaces into one Allure report.</td></tr></tbody></table>
+<tr><td><code>scripts/merge-allure.ps1</code></td><td>Merges three surfaces into one Allure report.</td></tr>
+<tr><td><code>scripts/start-env.ps1</code></td><td>Checks prerequisites, starts the Docker stack, emulator and Appium, and installs the released APK.</td></tr></tbody></table>
 
 <h3>shop-api-automation</h3>
 <p><strong>Role.</strong> API BDD suite.</p>
@@ -307,9 +308,9 @@ Without that difference, <code>find_gaps</code> returns nothing and the orchestr
 <tr><td><strong>REVIEWS-01</strong></td><td>Reviewing a product</td><td>4</td><td><span class="badge ok">covered</span></td><td><span class="badge ok">covered</span></td><td><span class="badge ok">covered</span></td><td><code>SHOP-11</code></td></tr>
 <tr><td><strong>WISHLIST-01</strong></td><td>Saving products for later</td><td>4</td><td><span class="badge ok">covered</span></td><td><span class="badge ok">covered</span></td><td><span class="badge ok">covered</span></td><td><code>SHOP-8</code></td></tr></tbody></table>
 <h3>Open gaps</h3>
-<p>8 gaps remain. These are deliberate: they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live on stage.</p>
+<p>6 gaps remain. These are deliberate: they are the work the orchestrator fans out to specialists, and at least one is reserved to be filled live on stage.</p>
 <table><thead><tr><th>Gap</th><th>Scenarios</th></tr></thead>
-<tbody><tr><td><code>CART-01 @mobile</code></td><td>4</td></tr>
+<tbody><tr><td><code>CART-01 @mobile</code></td><td>2</td></tr>
 <tr><td><code>CHECKOUT-01 @mobile</code></td><td>2</td></tr>
 <tr><td><code>CHECKOUT-01 @web</code></td><td>2</td></tr></tbody></table>
 </section>
@@ -592,29 +593,35 @@ Then I am told the product was not saved</code></pre>
 <table><thead><tr><th>Tool</th><th>Version</th><th>Needed by</th></tr></thead>
 <tbody><tr><td>JDK</td><td>21 (Temurin)</td><td>API + mobile suites, backend</td></tr>
 <tr><td>Node</td><td>20+</td><td>web suite, MCP servers</td></tr>
-<tr><td>Docker Desktop</td><td>any recent</td><td>Postgres, CI stack</td></tr>
+<tr><td>Docker Desktop</td><td>any recent</td><td>Docker stack (Postgres, backend, web), CI</td></tr>
 <tr><td>Android SDK + emulator</td><td>API 35</td><td>mobile suite only</td></tr>
 <tr><td>Appium</td><td>3.x + uiautomator2</td><td>mobile suite only</td></tr></tbody></table>
+<p><code>start-env.ps1</code> checks these first and lists everything that is missing, with where to get it. Docker, <code>adb</code>, the emulator, Appium and its <code>uiautomator2</code> driver are required (the last four unless you pass <code>-SkipMobile</code>). JDK 21, Maven and Node 20+ only produce a warning, because the Docker stack does not need them; they are needed to run the suites, and are required with <code>-Native</code>.</p>
 <div class="note">Verify the JDK with <code>mvn -v</code> &mdash; it must report <code>Java version: 21</code>.
 A bare <code>java -version</code> can report a different JDK when the machine PATH shadows it; that is harmless,
 because Maven and Gradle use <code>JAVA_HOME</code>.</div>
 <h3>7.2 Start the environment</h3>
 <p><strong>One command (Windows).</strong> From <code>shop-qa-orchestrator</code>, start Docker Desktop and run:</p>
 <pre><code>powershell -ExecutionPolicy Bypass -File scripts\start-env.ps1</code></pre>
-<p>It starts only what is not already healthy, opens a titled window per long-running service, and waits on each health check before moving on. Re-running it is safe.</p>
+<p>It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root <code>docker-compose.yml</code>, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.</p>
 <table><thead><tr><th>Option</th><th>Effect</th></tr></thead>
-<tbody><tr><td><em>(none)</em></td><td>Postgres, backend, web, emulator, Appium; builds the APK only if missing</td></tr>
-<tr><td><code>-SkipMobile</code></td><td>Postgres, backend and web only</td></tr>
-<tr><td><code>-BuildApk</code></td><td>Always rebuild the release APK</td></tr>
+<tbody><tr><td><em>(none)</em></td><td>Docker stack (Postgres, backend, web), emulator, Appium; downloads and installs the released APK if the app is not on the emulator</td></tr>
+<tr><td><code>-SkipMobile</code></td><td>Docker stack only: no emulator, Appium or APK</td></tr>
+<tr><td><code>-Native</code></td><td>Run backend and web from source instead of Docker (needs JDK 21, Maven, and <code>npm ci</code> in <code>shop-platform/web</code>)</td></tr>
+<tr><td><code>-BuildApk</code></td><td>Build the release APK with Gradle instead of downloading it (needs the generated <code>android/</code> folder)</td></tr>
+<tr><td><code>-ReinstallApk</code></td><td>Install the APK even if <code>com.shop.mobile</code> is already on the emulator</td></tr>
 <tr><td><code>-Avd &lt;name&gt;</code></td><td>Use a different AVD (default <code>shop_test</code>)</td></tr></tbody></table>
+<p><strong>Docker stack only.</strong> From the repo root, <code>docker compose up -d --build</code> starts Postgres, the backend (:8081) and the web app (:5173); <code>docker compose down</code> stops it (<code>-v</code> also wipes the database). Every credential in the compose file is a demo value for local use only. The repo root also holds <code>docker/web.Dockerfile</code> and a <code>README.md</code> quick start.</p>
 <p><strong>Manual steps.</strong> Run each from the Shop root. PowerShell does not accept the bash <code>VAR=value command</code> form; set <code>$env:VAR</code> first.</p>
 <table><thead><tr><th>Step</th><th>bash (macOS / Linux / CI)</th><th>Windows PowerShell</th><th>Notes</th></tr></thead>
-<tbody><tr><td>Postgres</td><td><code>cd shop-platform && docker compose up -d postgres</code></td><td><code>cd shop-platform; docker compose up -d postgres</code></td><td>Docker Desktop must be running</td></tr>
-<tr><td>Backend</td><td><code>cd shop-platform/backend && SPRING_PROFILES_ACTIVE=test mvn spring-boot:run</code></td><td><code>cd shop-platform\backend; $env:SPRING_PROFILES_ACTIVE="test"; mvn spring-boot:run</code></td><td>Serves :8081; Flyway migrates on start</td></tr>
-<tr><td>Web app</td><td><code>cd shop-platform/web && VITE_API_BASE_URL=http://localhost:8081 npx vite dev --port 5173</code></td><td><code>cd shop-platform\web; $env:VITE_API_BASE_URL="http://localhost:8081"; npx vite dev --port 5173</code></td><td>Serves :5173</td></tr>
+<tbody><tr><td>Stack (Docker, default)</td><td><code>docker compose up -d --build</code></td><td><code>docker compose up -d --build</code></td><td>Run from the repo root. Postgres + backend + web; web :5173, API :8081. <code>docker compose down</code> stops it (<code>-v</code> wipes the database)</td></tr>
+<tr><td>Postgres (native)</td><td><code>cd shop-platform && docker compose up -d postgres</code></td><td><code>cd shop-platform; docker compose up -d postgres</code></td><td>Only for <code>-Native</code>. Docker Desktop must be running</td></tr>
+<tr><td>Backend (native)</td><td><code>cd shop-platform/backend && SPRING_PROFILES_ACTIVE=test mvn spring-boot:run</code></td><td><code>cd shop-platform\backend; $env:SPRING_PROFILES_ACTIVE="test"; mvn spring-boot:run</code></td><td>Serves :8081; Flyway migrates on start</td></tr>
+<tr><td>Web app (native)</td><td><code>cd shop-platform/web && VITE_API_BASE_URL=http://localhost:8081 npx vite dev --port 5173</code></td><td><code>cd shop-platform\web; $env:VITE_API_BASE_URL="http://localhost:8081"; npx vite dev --port 5173</code></td><td>Serves :5173</td></tr>
 <tr><td>Emulator</td><td><code>emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect</code></td><td><code>emulator -avd shop_test -no-boot-anim -gpu swiftshader_indirect</code></td><td>Then poll <code>adb shell getprop sys.boot_completed</code> until <code>1</code></td></tr>
 <tr><td>Appium</td><td><code>appium --port 4723</code></td><td><code>appium --port 4723</code></td><td>Required by the mobile suite only</td></tr>
-<tr><td>Mobile APK</td><td><code>cd shop-platform/mobile/android && NODE_ENV=production ./gradlew assembleRelease</code></td><td><code>cd shop-platform\mobile\android; $env:NODE_ENV="production"; .\gradlew.bat assembleRelease</code></td><td>Release only &mdash; a debug APK renders an empty shell</td></tr></tbody></table>
+<tr><td>Mobile APK (released)</td><td>Download <code>app-release.apk</code> from the repo&rsquo;s GitHub Releases page, then <code>adb install -r app-release.apk</code></td><td>Download <code>app-release.apk</code> from the repo&rsquo;s GitHub Releases page, then <code>adb install -r app-release.apk</code></td><td>Package <code>com.shop.mobile</code>. <code>start-env.ps1</code> does this and checks the SHA-256</td></tr>
+<tr><td>Mobile APK (build)</td><td><code>cd shop-platform/mobile/android && NODE_ENV=production ./gradlew assembleRelease</code></td><td><code>cd shop-platform\mobile\android; $env:NODE_ENV="production"; .\gradlew.bat assembleRelease</code></td><td>Release only &mdash; a debug APK renders an empty shell. The <code>android/</code> folder is generated by <code>npx expo prebuild --platform android</code>, not stored in the repo</td></tr></tbody></table>
 <div class="note">If you cannot type into the emulator with the PC keyboard, the AVD has <code>hw.keyboard = no</code> in <code>%USERPROFILE%\.android\avd\shop_test.avd\config.ini</code>. Set it to <code>yes</code> and cold boot (<code>adb emu kill</code>, then start with <code>-no-snapshot-load</code>). If clicking a field shows a small floating toolbar instead of the keyboard, run <code>adb shell settings put secure stylus_handwriting_enabled 0</code>. <code>start-env.ps1</code> applies both.</div>
 <p><strong>Once running:</strong></p>
 <table><thead><tr><th>What</th><th>URL</th></tr></thead>
@@ -626,8 +633,8 @@ because Maven and Gradle use <code>JAVA_HOME</code>.</div>
 <h3>7.3 Run a suite</h3>
 <table><thead><tr><th>Suite</th><th>Repository</th><th>Command</th><th>Requires</th><th>Expected</th></tr></thead>
 <tbody><tr><td>API</td><td>shop-api-automation</td><td><code>mvn -B test</code></td><td>backend :8081</td><td>51 scenarios</td></tr>
-<tr><td>Web</td><td>shop-web-automation</td><td><code>npx bddgen && npx playwright test</code></td><td>web :5173 + backend</td><td>21 passed, 2 skipped</td></tr>
-<tr><td>Mobile</td><td>shop-mobile-automation</td><td><code>mvn -B test</code></td><td>emulator + Appium + backend</td><td>17 scenarios</td></tr>
+<tr><td>Web</td><td>shop-web-automation</td><td><code>npx bddgen && npx playwright test</code></td><td>web :5173 + backend</td><td>40 passed, 2 skipped</td></tr>
+<tr><td>Mobile</td><td>shop-mobile-automation</td><td><code>mvn -B test</code></td><td>emulator + Appium + backend</td><td>37 scenarios</td></tr>
 <tr><td>Merged report</td><td>shop-qa-orchestrator</td><td><code>pwsh scripts/merge-allure.ps1</code></td><td>any suite already run</td><td>one Allure report</td></tr></tbody></table>
 <h3>7.4 Configuration</h3>
 <p>Every value is env-overridable; nothing is hardcoded to localhost.</p>
@@ -767,7 +774,10 @@ files so specialists do not rediscover them.</p>
 <tr><td><strong>Virtualised lists</strong></td><td>Only mounted rows are queryable, so a product further down cannot be located.</td><td>Search for it first; assert counts via the app&rsquo;s own `result-count`.</td></tr>
 <tr><td><strong>Stock is consumed permanently</strong></td><td>Every checkout decrements stock, so a repeatable suite eventually starves.</td><td>`@BeforeAll` replenishes the catalog through the admin API.</td></tr>
 <tr><td><strong>Shared demo account</strong></td><td>Parallel web workers interleave cart and order state for the same user.</td><td>Web suite runs `workers: 1`.</td></tr>
-<tr><td><strong>PowerShell corrupts binaries</strong></td><td>`adb exec-out screencap -p > file.png` re-encodes and yields an invalid PNG.</td><td>`adb shell screencap` then `adb pull`.</td></tr></tbody></table>
+<tr><td><strong>PowerShell corrupts binaries</strong></td><td>`adb exec-out screencap -p > file.png` re-encodes and yields an invalid PNG.</td><td>`adb shell screencap` then `adb pull`.</td></tr>
+<tr><td><strong>Git does not track empty folders</strong></td><td>A Dockerfile that copies an empty folder (`web/public`) builds on the author&rsquo;s machine but fails on a fresh clone with &ldquo;not found&rdquo;.</td><td>Never `COPY` a folder that may be empty. Test the Docker build from a fresh clone, not the working copy.</td></tr>
+<tr><td><strong>Windows line endings can break scripts in containers</strong></td><td>With `core.autocrlf`, a Windows checkout can turn `mvnw` into CRLF, and the backend image build then fails with &ldquo;bad interpreter&rdquo;.</td><td>`.gitattributes` pins `mvnw`, `gradlew` and Dockerfiles to LF.</td></tr>
+<tr><td><strong>One dead Appium session fails everything after it</strong></td><td>When the emulator or UiAutomator2 hangs, every later scenario reports `Session ID is null` or a request timeout, which looks like many unrelated failures.</td><td>Look at the FIRST broken scenario. Restart the emulator and Appium, then re-run before investigating the app.</td></tr></tbody></table>
 </section>
 
 <section id="standards">
@@ -793,7 +803,7 @@ static mutable state &middot; duplicated locators &middot; mechanical Gherkin &m
 </ol>
 </section>
 
-<footer>Shop QA Platform handbook &middot; generated 2026-10-21T03:57:15.985Z &middot; regenerate with
+<footer>Shop QA Platform handbook &middot; generated 2026-10-25T13:45:28.309Z &middot; regenerate with
 <code>node mcp/contract-mcp/generate-docs.mjs</code></footer>
 </main>
 </div>

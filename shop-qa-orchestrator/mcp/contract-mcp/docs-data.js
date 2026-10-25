@@ -2,9 +2,11 @@
 // live repos and the contract layer, so the docs cannot drift from reality.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadAllScenarios, loadCoverage, buildMatrix, findGaps, SURFACES } from './contracts.js';
 
-const SHOP_ROOT = process.env.SHOP_ROOT ?? 'C:\\code\\Shop';
+// Default to the repo this file lives in, so a clone anywhere regenerates correctly.
+const SHOP_ROOT = process.env.SHOP_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
 const CONTRACTS = process.env.CONTRACTS_ROOT ?? join(SHOP_ROOT, 'shop-qa-orchestrator', 'contracts');
 
 const IGNORED = new Set([
