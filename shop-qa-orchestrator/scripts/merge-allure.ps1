@@ -1,7 +1,7 @@
 # Merges Allure results from all three surfaces into one report.
 # The whole point: 3 frameworks, 2 languages, 1 report.
 param(
-    [string]$ShopRoot = 'C:\code\Shop',
+    [string]$ShopRoot = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
     [switch]$Open
 )
 
@@ -44,13 +44,17 @@ Contracts=shop-qa-orchestrator/contracts/features
 
 $allure = Get-Command allure -ErrorAction SilentlyContinue
 if (-not $allure) {
+    # The web repo ships the CLI as a devDependency.
+    $allure = Get-Command (Join-Path $ShopRoot 'shop-web-automation\node_modules\.bin\allure.cmd') -ErrorAction SilentlyContinue
+}
+if (-not $allure) {
     Write-Output ''
     Write-Output "Merged into: $merged"
-    Write-Output 'Allure CLI not found. Install with: npm i -g allure-commandline'
+    Write-Output 'Allure CLI not found. Run npm install in shop-web-automation, or: npm i -g allure-commandline'
     exit 0
 }
 
-& allure generate $merged --clean -o $report
+& $allure.Source generate $merged --clean -o $report
 Write-Output ''
 Write-Output "Report: $report"
-if ($Open) { & allure open $report }
+if ($Open) { & $allure.Source open $report }
