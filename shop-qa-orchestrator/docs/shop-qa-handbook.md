@@ -2,7 +2,7 @@
 
 > **One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.**
 
-_Generated 2026-10-25T13:45:28.309Z from the live repositories and contract layer._
+_Generated 2026-10-25T14:44:29.572Z from the live repositories and contract layer._
 
 ## 1. At a glance
 
@@ -435,11 +435,13 @@ Verify the JDK with `mvn -v` &mdash; it must report `Java version: 21`. A bare `
 
 ### 7.2 Start the environment
 
-**One command (Windows).** From `shop-qa-orchestrator`, start Docker Desktop and run:
+**One command (Windows).** Start Docker Desktop and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\start-env.ps1
+powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1
 ```
+
+Run it from the repo root (the folder you cloned). Use forward slashes as shown; they work in PowerShell, cmd and Git Bash, where backslashes are swallowed.
 
 It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root `docker-compose.yml`, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.
 

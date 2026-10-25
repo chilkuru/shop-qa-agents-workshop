@@ -70,7 +70,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 
 <h1>Shop QA Platform &mdash; Engineering Handbook</h1>
 <blockquote>One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.</blockquote>
-<p style="color:var(--muted);font-size:13px">Generated 2026-10-25T13:45:28.309Z from the live repositories and contract layer.</p>
+<p style="color:var(--muted);font-size:13px">Generated 2026-10-25T14:44:29.572Z from the live repositories and contract layer.</p>
 
 <section id="glance">
 <h2>1. At a glance</h2>
@@ -601,8 +601,9 @@ Then I am told the product was not saved</code></pre>
 A bare <code>java -version</code> can report a different JDK when the machine PATH shadows it; that is harmless,
 because Maven and Gradle use <code>JAVA_HOME</code>.</div>
 <h3>7.2 Start the environment</h3>
-<p><strong>One command (Windows).</strong> From <code>shop-qa-orchestrator</code>, start Docker Desktop and run:</p>
-<pre><code>powershell -ExecutionPolicy Bypass -File scripts\start-env.ps1</code></pre>
+<p><strong>One command (Windows).</strong> Start Docker Desktop and run:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1</code></pre>
+<p>Run it from the repo root (the folder you cloned). Use forward slashes as shown; they work in PowerShell, cmd and Git Bash, where backslashes are swallowed.</p>
 <p>It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root <code>docker-compose.yml</code>, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.</p>
 <table><thead><tr><th>Option</th><th>Effect</th></tr></thead>
 <tbody><tr><td><em>(none)</em></td><td>Docker stack (Postgres, backend, web), emulator, Appium; downloads and installs the released APK if the app is not on the emulator</td></tr>
@@ -803,7 +804,7 @@ static mutable state &middot; duplicated locators &middot; mechanical Gherkin &m
 </ol>
 </section>
 
-<footer>Shop QA Platform handbook &middot; generated 2026-10-25T13:45:28.309Z &middot; regenerate with
+<footer>Shop QA Platform handbook &middot; generated 2026-10-25T14:44:29.572Z &middot; regenerate with
 <code>node mcp/contract-mcp/generate-docs.mjs</code></footer>
 </main>
 </div>

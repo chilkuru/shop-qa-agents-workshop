@@ -317,11 +317,13 @@ function markdown() {
   L.push('');
   L.push('### 7.2 Start the environment');
   L.push('');
-  L.push('**One command (Windows).** From `shop-qa-orchestrator`, start Docker Desktop and run:');
+  L.push('**One command (Windows).** Start Docker Desktop and run:');
   L.push('');
   L.push('```powershell');
-  L.push('powershell -ExecutionPolicy Bypass -File scripts\\start-env.ps1');
+  L.push('powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1');
   L.push('```');
+  L.push('');
+  L.push('Run it from the repo root (the folder you cloned). Use forward slashes as shown; they work in PowerShell, cmd and Git Bash, where backslashes are swallowed.');
   L.push('');
   L.push('It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root `docker-compose.yml`, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.');
   L.push('');
@@ -678,8 +680,9 @@ ${htmlTable(['Tool', 'Version', 'Needed by'], [
 A bare <code>java -version</code> can report a different JDK when the machine PATH shadows it; that is harmless,
 because Maven and Gradle use <code>JAVA_HOME</code>.</div>
 <h3>7.2 Start the environment</h3>
-<p><strong>One command (Windows).</strong> From <code>shop-qa-orchestrator</code>, start Docker Desktop and run:</p>
-<pre><code>powershell -ExecutionPolicy Bypass -File scripts\\start-env.ps1</code></pre>
+<p><strong>One command (Windows).</strong> Start Docker Desktop and run:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1</code></pre>
+<p>Run it from the repo root (the folder you cloned). Use forward slashes as shown; they work in PowerShell, cmd and Git Bash, where backslashes are swallowed.</p>
 <p>It checks prerequisites first, then starts only what is not already healthy and waits on each health check before moving on. By default it runs the Docker stack from the repo-root <code>docker-compose.yml</code>, and gets the APK from the repo&rsquo;s GitHub Release, verified against a SHA-256. Re-running it is safe.</p>
 ${htmlTable(['Option', 'Effect'], START_SCRIPT_OPTIONS.map((r) => r.map((c) => esc(c).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/_\(([^)]+)\)_/g, '<em>($1)</em>'))))}
 <p><strong>Docker stack only.</strong> From the repo root, <code>docker compose up -d --build</code> starts Postgres, the backend (:8081) and the web app (:5173); <code>docker compose down</code> stops it (<code>-v</code> also wipes the database). Every credential in the compose file is a demo value for local use only. The repo root also holds <code>docker/web.Dockerfile</code> and a <code>README.md</code> quick start.</p>

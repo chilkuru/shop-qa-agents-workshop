@@ -1,7 +1,7 @@
 # Brings up everything the three suites need. Safe to re-run: anything already healthy is left alone.
 # Default: the Docker stack (backend + web + Postgres) from the repo-root docker-compose.yml, and the
 # released APK downloaded from GitHub. Windows only.
-# Usage: powershell -ExecutionPolicy Bypass -File scripts\start-env.ps1 [-SkipMobile] [-Native] [-BuildApk] [-ReinstallApk] [-Avd <name>]
+# Usage: powershell -ExecutionPolicy Bypass -File scripts/start-env.ps1 [-SkipMobile] [-Native] [-BuildApk] [-ReinstallApk] [-Avd <name>]
 #   -SkipMobile    API and web only: no emulator, Appium or APK.
 #   -Native        Run backend and web app from source (needs JDK 21, Maven, Node, `npm ci` in shop-platform/web).
 #   -BuildApk      Build the APK with Gradle instead of downloading it (needs the generated android/ folder).

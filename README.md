@@ -28,6 +28,13 @@ Open `shop-qa.code-workspace` in VS Code so all five folders load as one workspa
 ## Quick start
 
 ```
+git clone https://github.com/chilkuru/shop-qa-agents-workshop.git
+cd shop-qa-agents-workshop
+```
+
+Run every command in this README from that folder (the repo root).
+
+```
 docker compose up -d --build
 ```
 
@@ -44,8 +51,10 @@ Stop with `docker compose down` (add `-v` to wipe the database).
 ### One command for everything (Windows)
 
 ```
-powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator\scripts\start-env.ps1
+powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1
 ```
+
+Use forward slashes as shown; they work in PowerShell, cmd and Git Bash. Backslashes are swallowed by Git Bash.
 
 It starts the Docker stack above, boots the emulator and Appium, downloads the released APK (checked against a SHA-256) and installs it. It is safe to re-run: anything already healthy is left alone. Options:
 
@@ -117,7 +126,7 @@ The APK is written to `shop-platform/mobile/android/app/build/outputs/apk/releas
 
 The app calls `http://10.0.2.2:8081` by default, which is the emulator's alias for your machine's port 8081, where the Docker stack publishes the backend. To point it elsewhere, set `EXPO_PUBLIC_API_BASE_URL` before running `gradlew`; the value is baked into the bundle at build time.
 
-`shop-qa-orchestrator/scripts/start-env.ps1` is an optional Windows helper that starts the stack without Docker and boots the emulator.
+`shop-qa-orchestrator/scripts/start-env.ps1` is the Windows helper described above; `-Native` makes it start the stack from source instead of Docker.
 
 ## Using the agents
 
