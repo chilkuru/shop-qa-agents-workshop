@@ -25,7 +25,7 @@ Open `shop-qa.code-workspace` in VS Code so all five folders load as one workspa
 - VS Code with GitHub Copilot (agent mode)
 - Mobile only: Android SDK with an emulator, and Appium 3 with the `uiautomator2` driver
 
-## Quick start
+## Get the code
 
 ```
 git clone https://github.com/chilkuru/shop-qa-agents-workshop.git
@@ -34,21 +34,9 @@ cd shop-qa-agents-workshop
 
 Run every command in this README from that folder (the repo root).
 
-```
-docker compose up -d --build
-```
+## One command for everything (Windows)
 
-| Service | URL |
-|---|---|
-| Web app | http://localhost:5173 |
-| Backend API | http://localhost:8081 |
-| Backend health | http://localhost:8081/actuator/health |
-
-Sign in with `demo@shop.in` / `Demo@12345`. All test users live in `shop-qa-orchestrator/contracts/fixtures/users.json`.
-
-Stop with `docker compose down` (add `-v` to wipe the database).
-
-### One command for everything (Windows)
+**Recommended.** This is the preferred way to get started.
 
 ```
 powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.ps1
@@ -56,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator/scripts/start-env.
 
 Use forward slashes as shown; they work in PowerShell, cmd and Git Bash. Backslashes are swallowed by Git Bash.
 
-It starts the Docker stack above, boots the emulator and Appium, downloads the released APK (checked against a SHA-256) and installs it. It is safe to re-run: anything already healthy is left alone. Options:
+It starts the Docker stack, installs the npm dependencies for the MCP servers and the web suite if they are missing, seeds the demo users, boots the emulator and Appium, downloads the released APK (checked against a SHA-256) and installs it. It is safe to re-run: anything already healthy is left alone. Options:
 
 | Option | Effect |
 |---|---|
@@ -70,9 +58,37 @@ For mobile it expects `adb` and `appium` on your PATH and an Android Virtual Dev
 
 The script checks prerequisites first and lists everything that is missing, with where to get it, before starting anything. Docker, `adb`, the emulator, Appium and its `uiautomator2` driver are required (the last four unless you pass `-SkipMobile`). JDK 21, Maven and Node.js 20+ only produce a warning, because they are needed to run the suites rather than to start the stack; with `-Native` they are required.
 
+> **Not using the script?** Skip it and follow [Quick start](#quick-start) below, then continue with the sections after it. Without the script you must seed the demo users, install the MCP server dependencies and set up the mobile environment yourself; the sections below cover each.
+
+## Quick start
+
+Docker stack only, without the script (any OS). Use this if you do not want to run `start-env.ps1`.
+
+```
+docker compose up -d --build
+```
+
+| Service | URL |
+|---|---|
+| Web app | http://localhost:5173 |
+| Backend API | http://localhost:8081 |
+| Backend health | http://localhost:8081/actuator/health |
+
+Seed the demo user (no migration creates it), then sign in with `demo@shop.in` / `Demo@12345`. All test users live in `shop-qa-orchestrator/contracts/fixtures/users.json`.
+
+```
+curl -X POST http://localhost:8081/api/test-support/seed-user -H "X-Test-Token: local-test-token" -H "Content-Type: application/json" -d '{"email":"demo@shop.in","password":"Demo@12345","fullName":"Demo Shopper","role":"CUSTOMER"}'
+```
+
+Repeat for the other users in that file if you need them (`start-env.ps1` seeds all of them).
+
+Stop with `docker compose down` (add `-v` to wipe the database).
+
 > Every credential in `docker-compose.yml` and `.vscode/mcp.json` is a **demo value for local use only**. Do not reuse them, and do not deploy this stack publicly as-is: the `test` profile exposes seed and reset endpoints guarded only by a shared token.
 
 ## Install the MCP servers
+
+`start-env.ps1` does this for you. Otherwise:
 
 ```
 cd shop-qa-orchestrator/mcp/contract-mcp && npm ci
@@ -100,7 +116,7 @@ Run a single feature by tag, for example `mvn -B test "-Dcucumber.filter.tags=@a
 
 ### Mobile
 
-If you ran `start-env.ps1` above, the emulator, Appium and APK are ready: skip to step 5. Otherwise:
+If you ran `start-env.ps1`, the emulator, Appium and APK are ready: skip to step 5. Otherwise:
 
 1. Download `app-release.apk` from this repo's **Releases** page.
 2. Start an emulator and wait until it has booted: `adb shell getprop sys.boot_completed` returns `1`.
