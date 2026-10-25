@@ -59,15 +59,82 @@ function Get-EmulatorExe {
     throw 'emulator.exe not found; add the Android SDK emulator folder to PATH or set ANDROID_HOME'
 }
 
-function Assert-Command($name, $hint) {
-    if (-not (Get-Command $name -ErrorAction SilentlyContinue)) { throw "$name not found on PATH. $hint" }
+function Test-Command($name) { [bool](Get-Command $name -ErrorAction SilentlyContinue) }
+
+# java and appium write version text to stderr, so run them through cmd to capture it.
+function Get-MajorVersion($commandLine) {
+    $text = (cmd /c "$commandLine 2>&1" | Select-Object -First 1) -join ''
+    if ($text -match '(\d+)(\.\d+)*') { [int]$Matches[1] } else { 0 }
+}
+
+# Reports every missing prerequisite at once, with where to get it, instead of failing on the first.
+function Test-Prerequisites {
+    $missing = New-Object System.Collections.Generic.List[string]
+    $warnings = New-Object System.Collections.Generic.List[string]
+    # JDK, Maven and Node are only needed to start the stack with -Native; otherwise they are for running the suites.
+    $toolBucket = $warnings
+    if ($Native) { $toolBucket = $missing }
+
+    if (-not (Test-Command 'docker')) {
+        $missing.Add('Docker Desktop not found. Install it from https://www.docker.com/products/docker-desktop/ and start it.')
+    } else {
+        docker info *> $null
+        if ($LASTEXITCODE -ne 0) { $missing.Add('Docker Desktop is installed but not running. Start it, wait until it reports running, and re-run.') }
+    }
+
+    if (-not (Test-Command 'java')) {
+        $toolBucket.Add('JDK 21 not found (needed to run the API and mobile suites). Install Temurin 21 from https://adoptium.net and make sure java is on PATH.')
+    } elseif ((Get-MajorVersion 'java -version') -lt 21) {
+        $toolBucket.Add("JDK 21 is required but java reports version $(Get-MajorVersion 'java -version'). Install Temurin 21 and put it first on PATH.")
+    }
+    if (-not (Test-Command 'mvn')) {
+        $toolBucket.Add('Maven not found (needed to run the API and mobile suites). Install it from https://maven.apache.org/download.cgi and add its bin folder to PATH.')
+    }
+    if (-not (Test-Command 'node')) {
+        $toolBucket.Add('Node.js 20+ not found (needed for the web suite and the MCP servers). Install it from https://nodejs.org.')
+    } elseif ((Get-MajorVersion 'node --version') -lt 20) {
+        $toolBucket.Add("Node.js 20 or newer is required but node reports version $(Get-MajorVersion 'node --version'). Upgrade from https://nodejs.org.")
+    }
+
+    if (-not $SkipMobile) {
+        $hasAdb = Test-Command 'adb'
+        if (-not $hasAdb) { $missing.Add('adb not found. Install Android SDK platform-tools (Android Studio > SDK Manager) and add them to PATH.') }
+
+        try {
+            $emulatorExe = Get-EmulatorExe
+            $emulatorRunning = $hasAdb -and (Get-EmulatorSerial)
+            if (-not $emulatorRunning) {
+                $avds = @(& $emulatorExe -list-avds)
+                if ($avds -notcontains $Avd) {
+                    $found = if ($avds.Count) { $avds -join ', ' } else { 'none' }
+                    $missing.Add("Android emulator '$Avd' not found (available: $found). Create a Pixel device named $Avd in Android Studio's Device Manager, or pass -Avd <name>.")
+                }
+            }
+        } catch {
+            $missing.Add('Android emulator not found. Install the Emulator in Android Studio > SDK Manager, then add its folder to PATH or set ANDROID_HOME.')
+        }
+
+        if (-not (Test-Command 'appium')) {
+            $missing.Add('Appium not found. Install it with: npm i -g appium')
+        } else {
+            if ((Get-MajorVersion 'appium --version') -lt 3) { $warnings.Add('Appium 3 is recommended; update with: npm i -g appium') }
+            if (-not ((cmd /c 'appium driver list --installed 2>&1') -match 'uiautomator2')) {
+                $missing.Add('Appium uiautomator2 driver not installed. Install it with: appium driver install uiautomator2')
+            }
+        }
+    }
+
+    foreach ($warning in $warnings) { Write-Host "  WARNING    $warning" -ForegroundColor Yellow }
+    if ($missing.Count) {
+        throw ("Missing prerequisites:`n  - " + ($missing -join "`n  - ") + "`nInstall them and re-run this script.")
+    }
+    Write-Step 'Checks' 'prerequisites present' Green
 }
 
 Write-Host "Shop environment ($ShopRoot)" -ForegroundColor Cyan
 
 try {
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) { throw 'Docker is not reachable. Start Docker Desktop and re-run.' }
+    Test-Prerequisites
 
     if (-not $Native) {
         # Backend + web + Postgres in containers; the first run builds the images, which takes a few minutes.
@@ -113,8 +180,6 @@ try {
     }
 
     if (-not $SkipMobile) {
-        Assert-Command 'adb' 'Install the Android SDK platform-tools and add them to PATH.'
-        Assert-Command 'appium' 'Install with: npm i -g appium ; appium driver install uiautomator2'
         # Emulator: host keyboard enabled in the AVD config so you can type from the PC keyboard.
         $avdConfig = Join-Path $env:USERPROFILE ".android\avd\$Avd.avd\config.ini"
         $keyboardChanged = $false

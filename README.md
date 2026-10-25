@@ -59,6 +59,8 @@ It starts the Docker stack above, boots the emulator and Appium, downloads the r
 
 For mobile it expects `adb` and `appium` on your PATH and an Android Virtual Device named `shop_test` (create a Pixel device in Android Studio's Device Manager, or pass `-Avd`).
 
+The script checks prerequisites first and lists everything that is missing, with where to get it, before starting anything. Docker, `adb`, the emulator, Appium and its `uiautomator2` driver are required (the last four unless you pass `-SkipMobile`). JDK 21, Maven and Node.js 20+ only produce a warning, because they are needed to run the suites rather than to start the stack; with `-Native` they are required.
+
 > Every credential in `docker-compose.yml` and `.vscode/mcp.json` is a **demo value for local use only**. Do not reuse them, and do not deploy this stack publicly as-is: the `test` profile exposes seed and reset endpoints guarded only by a shared token.
 
 ## Install the MCP servers
