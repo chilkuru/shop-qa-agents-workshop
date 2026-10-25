@@ -59,6 +59,18 @@ function Get-EmulatorExe {
     throw 'emulator.exe not found; add the Android SDK emulator folder to PATH or set ANDROID_HOME'
 }
 
+# Users are not seeded by any migration, so upsert them from the contract fixtures on every start.
+function Initialize-Users {
+    $token = if ($env:TEST_SUPPORT_TOKEN) { $env:TEST_SUPPORT_TOKEN } else { 'local-test-token' }
+    $fixture = Join-Path $PSScriptRoot '..\contracts\fixtures\users.json'
+    $users = (Get-Content $fixture -Raw | ConvertFrom-Json).users.PSObject.Properties.Value
+    foreach ($u in $users) {
+        $body = @{ email = $u.email; password = $u.password; fullName = $u.fullName; role = $u.role } | ConvertTo-Json
+        Invoke-RestMethod -Method Post -Uri 'http://localhost:8081/api/test-support/seed-user' -Headers @{ 'X-Test-Token' = $token } -ContentType 'application/json' -Body $body | Out-Null
+    }
+    Write-Step 'Users' "seeded $(@($users).Count) fixture users" Green
+}
+
 function Test-Command($name) { [bool](Get-Command $name -ErrorAction SilentlyContinue) }
 
 # java and appium write version text to stderr, so run them through cmd to capture it.
@@ -178,6 +190,8 @@ try {
             Write-Step 'Web app' 'up on :5173' Green
         }
     }
+
+    Initialize-Users
 
     if (-not $SkipMobile) {
         # Emulator: host keyboard enabled in the AVD config so you can type from the PC keyboard.
