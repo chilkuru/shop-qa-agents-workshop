@@ -149,6 +149,29 @@
                 </dependencies>
             </plugin>
 
+            <!-- Stale results from earlier runs would otherwise be merged into this run's report. -->
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>clean-allure-results</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/allure-results</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Builds target/site/allure-maven-plugin/index.html right after the tests. -->
             <plugin>
                 <groupId>io.qameta.allure</groupId>
