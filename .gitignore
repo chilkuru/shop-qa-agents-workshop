@@ -12,6 +12,7 @@ test-results/
 playwright-report/
 allure-results/
 allure-report/
+.allure/
 shop-qa-orchestrator/reports/
 
 # Android native project and binaries (the APK ships as a GitHub Release asset)
