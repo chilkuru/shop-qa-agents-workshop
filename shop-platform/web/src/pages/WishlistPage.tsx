@@ -36,9 +36,9 @@ export function WishlistPage() {
       {items.length === 0 ? (
         <p data-testid="wishlist-empty">You have not saved anything yet.</p>
       ) : (
-        <ul className="product-list" data-testid="wishlist-list">
+        <ul className="product-grid" data-testid="wishlist-list">
           {items.map((item) => (
-            <li key={item.productId} data-testid={`wishlist-row-${item.productId}`}>
+            <li key={item.productId} className="product-card" data-testid={`wishlist-row-${item.productId}`}>
               <Link to={`/products/${item.productId}`} data-testid={`wishlist-link-${item.productId}`}>
                 <img
                   className="product-image"
