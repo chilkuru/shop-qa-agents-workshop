@@ -41,6 +41,24 @@ Sign in with `demo@shop.in` / `Demo@12345`. All test users live in `shop-qa-orch
 
 Stop with `docker compose down` (add `-v` to wipe the database).
 
+### One command for everything (Windows)
+
+```
+powershell -ExecutionPolicy Bypass -File shop-qa-orchestrator\scripts\start-env.ps1
+```
+
+It starts the Docker stack above, boots the emulator and Appium, downloads the released APK (checked against a SHA-256) and installs it. It is safe to re-run: anything already healthy is left alone. Options:
+
+| Option | Effect |
+|---|---|
+| `-SkipMobile` | API and web only: no emulator, Appium or APK |
+| `-Avd <name>` | Use a different emulator (default `shop_test`) |
+| `-ReinstallApk` | Install the APK even if it is already on the emulator |
+| `-Native` | Run backend and web from source instead of Docker (needs JDK 21, Maven, and `npm ci` in `shop-platform/web`) |
+| `-BuildApk` | Build the APK with Gradle instead of downloading it |
+
+For mobile it expects `adb` and `appium` on your PATH and an Android Virtual Device named `shop_test` (create a Pixel device in Android Studio's Device Manager, or pass `-Avd`).
+
 > Every credential in `docker-compose.yml` and `.vscode/mcp.json` is a **demo value for local use only**. Do not reuse them, and do not deploy this stack publicly as-is: the `test` profile exposes seed and reset endpoints guarded only by a shared token.
 
 ## Install the MCP servers
@@ -70,6 +88,8 @@ npx bddgen && npx playwright test
 Run a single feature by tag, for example `mvn -B test "-Dcucumber.filter.tags=@api and @ORDERS-01"`. Use the tag for the surface you are running (`@api`, `@web`, `@mobile`); a mismatched tag selects scenarios that have no steps in that suite.
 
 ### Mobile
+
+If you ran `start-env.ps1` above, the emulator, Appium and APK are ready: skip to step 5. Otherwise:
 
 1. Download `app-release.apk` from this repo's **Releases** page.
 2. Start an emulator and wait until it has booted: `adb shell getprop sys.boot_completed` returns `1`.
