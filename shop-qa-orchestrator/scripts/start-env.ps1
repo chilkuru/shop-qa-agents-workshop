@@ -143,10 +143,37 @@ function Test-Prerequisites {
     Write-Step 'Checks' 'prerequisites present' Green
 }
 
+# node_modules is gitignored, so a fresh clone has none and the MCP servers exit with ERR_MODULE_NOT_FOUND.
+function Install-NodeDependencies {
+    if (-not (Test-Command 'node')) {
+        Write-Step 'Node deps' 'skipped (node not installed)' Yellow
+        return
+    }
+    $projects = @(
+        'shop-qa-orchestrator\mcp\contract-mcp',
+        'shop-qa-orchestrator\mcp\shop-app-mcp',
+        'shop-qa-orchestrator\mcp\android-mcp',
+        'shop-web-automation'
+    )
+    foreach ($project in $projects) {
+        $dir = Join-Path $ShopRoot $project
+        if (-not (Test-Path (Join-Path $dir 'package.json')) -or (Test-Path (Join-Path $dir 'node_modules'))) { continue }
+        Write-Step 'Node deps' "npm ci in $project ..."
+        Push-Location $dir
+        # cmd avoids the npm .ps1 shim, which the default execution policy blocks.
+        cmd /c 'npm ci --no-fund --no-audit'
+        $exit = $LASTEXITCODE
+        Pop-Location
+        if ($exit -ne 0) { throw "npm ci failed in $project (see output above)." }
+    }
+    Write-Step 'Node deps' 'installed' Green
+}
+
 Write-Host "Shop environment ($ShopRoot)" -ForegroundColor Cyan
 
 try {
     Test-Prerequisites
+    Install-NodeDependencies
 
     if (-not $Native) {
         # Backend + web + Postgres in containers; the first run builds the images, which takes a few minutes.
