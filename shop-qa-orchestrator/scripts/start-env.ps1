@@ -292,6 +292,10 @@ try {
         Wait-Until 'Emulator boot' { (adb shell getprop sys.boot_completed 2>$null) -match '1' }
         # Stops Gboard showing the stylus toolbar instead of the keyboard when clicking with a mouse.
         adb shell settings put secure stylus_handwriting_enabled 0
+        # A freshly booted emulator can have the display off, which looks like a black screen.
+        adb shell input keyevent KEYCODE_WAKEUP
+        adb shell wm dismiss-keyguard
+        adb shell settings put system screen_off_timeout 2147483647
         Write-Step 'Emulator' "booted ($(Get-EmulatorSerial))" Green
 
         # Appium
@@ -342,6 +346,11 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'adb install failed (see output above)' }
         }
         Write-Step 'APK' 'com.shop.mobile installed' Green
+
+        # Puts the app in front so the emulator shows it instead of a stale screen such as Camera.
+        adb shell input keyevent KEYCODE_HOME
+        adb shell monkey -p com.shop.mobile -c android.intent.category.LAUNCHER 1 *> $null
+        Write-Step 'App' 'com.shop.mobile opened' Green
     }
 
     Write-Host "`nReady. Web app: $webUrl   Swagger: http://localhost:8081/swagger-ui.html" -ForegroundColor Cyan
