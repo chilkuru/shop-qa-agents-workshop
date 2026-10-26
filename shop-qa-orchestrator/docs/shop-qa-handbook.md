@@ -2,7 +2,7 @@
 
 > **One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.**
 
-_Generated 2026-10-25T14:44:29.572Z from the live repositories and contract layer._
+_Generated 2026-10-26T16:55:36.197Z from the live repositories and contract layer._
 
 ## 1. At a glance
 
@@ -631,3 +631,77 @@ Every entry below cost real debugging time on this project.
 | D | Step defs depend on abstractions; the DI container wires implementations. |
 
 **Rejected outright:** inline locators in steps &middot; `Thread.sleep` or any fixed wait &middot; assertions in page objects &middot; static mutable state &middot; duplicated locators &middot; mechanical Gherkin &middot; editing the app to make a test pass.
+
+## 15. Framework structure: API, Web and Mobile
+
+All three suites follow the same shape: `.feature` &rarr; step definitions (assert) &rarr; page, screen or service objects (interact and wait) &rarr; driver. The Gherkin lives only in `shop-qa-orchestrator/contracts/features`; each repo owns step definitions only.
+
+### 15.1 Side by side
+
+|  | API | Web | Mobile |
+|---|---|---|---|
+| Repository | `shop-api-automation` | `shop-web-automation` | `shop-mobile-automation` |
+| Language | Java 21 | TypeScript | Java 21 |
+| Runner | cucumber-jvm on JUnit Platform (`RunApiSuite`) | playwright-bdd: `bddgen` generates specs, Playwright runs them | cucumber-jvm on JUnit Platform (`RunMobileSuite`) |
+| Driver | Rest Assured (HTTP) | Playwright `page` and `request` | Appium `AndroidDriver` (UiAutomator2) |
+| Interaction layer | `services/*Api` behind the `ShopApi` facade | `pages/*` page and component objects | `screens/*` screen objects on `BaseScreen` |
+| Dependency injection | PicoContainer (constructor injection) | Playwright fixtures in `src/fixtures/test.ts` | PicoContainer (constructor injection) |
+| Per-scenario state | `ScenarioContext` | `ScenarioState` fixture | `ScenarioContext` |
+| Driver lifecycle | No driver; stateless HTTP calls | Playwright creates a fresh browser context per test | ThreadLocal `DriverManager`; `@Before` starts it and clears app data, `@After` quits it |
+| Locators | None; request paths live in the services | `getByTestId` on `data-testid` only | `byTestId` wraps `UiSelector.resourceId`; `testID` is the raw Android resource-id |
+| Waiting | None needed; assert the change against a baseline | Playwright auto-wait, plus an explicit wait on the resulting state | `WebDriverWait` with `ExpectedConditions` (20 s); never `Thread.sleep` |
+| Failure evidence | Request/response dump | Screenshot and Playwright trace | Screenshot, page source and logcat tail |
+| Allure output | `target/allure-results`; HTML in `target/site/allure-maven-plugin` | `allure-results`; HTML in `allure-report` | `target/allure-results`; HTML in `target/site/allure-maven-plugin` |
+| Run | `mvn -B test` | `npm test` (headed: `npm run test:headed`) | `mvn -B test` |
+
+### 15.2 API &mdash; `shop-api-automation`
+
+`.feature` &rarr; `steps/*Steps.java` &rarr; `support/ShopApi` &rarr; `services/*Api.java` &rarr; Rest Assured
+
+| Location | Responsibility |
+|---|---|
+| `runner/` | `RunApiSuite` selects `../shop-qa-orchestrator/contracts/features`. Glue and the Allure plugin are set in `junit-platform.properties`. |
+| `steps/` | One `*Steps` class per feature. Assertions only; no URLs and no request building. |
+| `support/ShopApi.java` | Facade over the services. The only dependency of the step layer; also holds cross-cutting setup such as `replenishStock`. |
+| `services/` | `BaseService` builds the request spec (base URI, JSON, Allure filter, bearer and test-token headers). One `*Api` class per resource. No assertions. |
+| `context/ScenarioContext.java` | Token, current user, last response and last order number for one scenario. |
+| `fixtures/`, `config/` | `Fixtures` loads `contracts/fixtures/*.json`; `Config` reads `SHOP_API_BASE_URL`, `TEST_SUPPORT_TOKEN`, `CONTRACTS_DIR`. |
+| `hooks/Hooks.java` | `@BeforeAll` tops up catalog stock; `@After` attaches the last response when a scenario fails. |
+
+### 15.3 Web &mdash; `shop-web-automation`
+
+`.feature` &rarr; `bddgen` &rarr; `src/steps/*.steps.ts` &rarr; `src/pages/*.ts` &rarr; Playwright
+
+| Location | Responsibility |
+|---|---|
+| `src/steps/` | One `*.steps.ts` per feature. Import `Given`, `When`, `Then` from `fixtures/test.js`. Assertions only, using `expect`. |
+| `src/pages/` | `BasePage` (`byTestId`, `goto`) and one class per page, plus `HeaderComponent`. Interactions and waits only; they return locators for steps to assert on. |
+| `src/fixtures/test.ts` | Extends the playwright-bdd `test` with a fixture for every page object, `shopApi` and `state`. Adding a page object means adding a fixture. |
+| `src/fixtures/contractFixtures.ts` | Reads `contracts/fixtures/*.json`. No literals in steps. |
+| `src/api/ShopApi.ts` | Facade that seeds users, carts and addresses through the API for Background steps. Never asserts. |
+| `playwright.config.ts` | `defineBddConfig` points `featuresRoot` at the contracts repo and lists both `src/steps/**` and `src/fixtures/test.ts`. `tags: @web`, `missingSteps: skip-scenario`, `workers: 1`. |
+| `scripts/test-and-report.mjs` | Runs `bddgen`, then the tests, then builds the Allure HTML even when tests fail. |
+
+### 15.4 Mobile &mdash; `shop-mobile-automation`
+
+`.feature` &rarr; `steps/*Steps.java` &rarr; `screens/*Screen.java` &rarr; `DriverManager` &rarr; Appium
+
+| Location | Responsibility |
+|---|---|
+| `runner/` | `RunMobileSuite` selects the contracts directory with `@SelectDirectories`; surefire includes `**/Run*Suite.java`. |
+| `steps/` | One `*Steps` class per feature. Assertions only. |
+| `screens/` | `BaseScreen` holds `byTestId`, explicit waits, `tap`, `textOf` and `scrollIntoViewByText` for virtualised lists. One screen class per app screen. Interactions and waits only. |
+| `driver/DriverManager.java` | ThreadLocal `AndroidDriver` factory. Keeps the installed APK (`noReset`) because the pipeline owns installation. |
+| `support/ShopApi.java` | Facade used to seed state through the API instead of the UI. |
+| `context/`, `fixtures/`, `config/` | Per-scenario `ScenarioContext`; `Fixtures` over the shared JSON; `Config` reads `APPIUM_URL`, `APP_PACKAGE`, device name. |
+| `hooks/Hooks.java` | `@Before` starts the driver and clears app data so every scenario starts signed out; `@After` attaches screenshot, page source and logcat tail, then quits. |
+
+### 15.5 Adding a scenario to any suite
+
+| Step | What to do |
+|---|---|
+| 1 | Get the scenario with `get_scenario`, or find the work with `find_gaps`. |
+| 2 | Add NEW step methods in the `steps` layer. Reuse an existing step only when its text matches exactly; step text is globally unique. |
+| 3 | Add interaction methods to the page, screen or service object. No assertions there. |
+| 4 | If setup needs seeded data, go through `ShopApi`, not the UI. |
+| 5 | Run the suite for that feature tag until green, then call `link_implementation` and confirm `get_coverage_matrix` shows `covered`. |

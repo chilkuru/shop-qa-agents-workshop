@@ -33,7 +33,7 @@ check('all diagrams rendered to SVG', diagrams.total > 0 && diagrams.rendered ==
 check('no diagram syntax errors', diagrams.errored === 0, String(diagrams.errored));
 
 const sections = await page.$$eval('main section', (s) => s.map((x) => x.id));
-check('all 14 sections present', sections.length === 14, sections.join(', '));
+check('all 15 sections present', sections.length === 15, sections.join(', '));
 
 const navCount = await page.$$eval('#nav a', (a) => a.length);
 check('nav matches sections', navCount === sections.length, `${navCount} links`);
@@ -57,8 +57,8 @@ await page.fill('#search', 'appium');
 const visibleAfter = await page.$$eval('main section:not(.hidden)', (s) => s.length);
 await page.fill('#search', '');
 const visibleReset = await page.$$eval('main section:not(.hidden)', (s) => s.length);
-check('search filters sections', visibleAfter > 0 && visibleAfter < 14, `${visibleAfter} of 14`);
-check('clearing search restores all', visibleReset === 14, String(visibleReset));
+check('search filters sections', visibleAfter > 0 && visibleAfter < 15, `${visibleAfter} of 15`);
+check('clearing search restores all', visibleReset === 15, String(visibleReset));
 
 const offline = await page.evaluate(() =>
   [...document.querySelectorAll('script[src]')].map((s) => s.src));

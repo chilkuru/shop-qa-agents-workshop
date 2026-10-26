@@ -64,13 +64,13 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
   <h1>Shop QA Platform</h1>
   <div class="sub">Engineering Handbook</div>
   <input id="search" type="search" placeholder="Filter sections&hellip;" aria-label="Filter sections">
-  <nav id="nav"><a href="#glance" data-target="glance">1. At a glance</a><a href="#architecture" data-target="architecture">2. Architecture</a><a href="#repositories" data-target="repositories">3. Repositories</a><a href="#contracts" data-target="contracts">4. Contract layer</a><a href="#matrix" data-target="matrix">5. Traceability matrix</a><a href="#tests" data-target="tests">6. Test details</a><a href="#running" data-target="running">7. Running the tests</a><a href="#data" data-target="data">8. Test data</a><a href="#mcp" data-target="mcp">9. MCP servers</a><a href="#agents" data-target="agents">10. Agents</a><a href="#reporting" data-target="reporting">11. Reporting</a><a href="#ci" data-target="ci">12. CI</a><a href="#traps" data-target="traps">13. Traps</a><a href="#standards" data-target="standards">14. Design standards</a></nav>
+  <nav id="nav"><a href="#glance" data-target="glance">1. At a glance</a><a href="#architecture" data-target="architecture">2. Architecture</a><a href="#repositories" data-target="repositories">3. Repositories</a><a href="#contracts" data-target="contracts">4. Contract layer</a><a href="#matrix" data-target="matrix">5. Traceability matrix</a><a href="#tests" data-target="tests">6. Test details</a><a href="#running" data-target="running">7. Running the tests</a><a href="#data" data-target="data">8. Test data</a><a href="#mcp" data-target="mcp">9. MCP servers</a><a href="#agents" data-target="agents">10. Agents</a><a href="#reporting" data-target="reporting">11. Reporting</a><a href="#ci" data-target="ci">12. CI</a><a href="#traps" data-target="traps">13. Traps</a><a href="#standards" data-target="standards">14. Design standards</a><a href="#structure" data-target="structure">15. Framework structure</a></nav>
 </aside>
 <main>
 
 <h1>Shop QA Platform &mdash; Engineering Handbook</h1>
 <blockquote>One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.</blockquote>
-<p style="color:var(--muted);font-size:13px">Generated 2026-10-25T14:44:29.572Z from the live repositories and contract layer.</p>
+<p style="color:var(--muted);font-size:13px">Generated 2026-10-26T16:55:36.197Z from the live repositories and contract layer.</p>
 
 <section id="glance">
 <h2>1. At a glance</h2>
@@ -804,7 +804,64 @@ static mutable state &middot; duplicated locators &middot; mechanical Gherkin &m
 </ol>
 </section>
 
-<footer>Shop QA Platform handbook &middot; generated 2026-10-25T14:44:29.572Z &middot; regenerate with
+<section id="structure">
+<h2>15. Framework structure: API, Web and Mobile</h2>
+<p>All three suites follow the same shape: <code>.feature</code> &rarr; step definitions (assert) &rarr; page, screen or service objects (interact and wait) &rarr; driver. The Gherkin lives only in <code>shop-qa-orchestrator/contracts/features</code>; each repo owns step definitions only.</p>
+<h3>15.1 Side by side</h3>
+<table><thead><tr><th></th><th>API</th><th>Web</th><th>Mobile</th></tr></thead>
+<tbody><tr><td><strong>Repository</strong></td><td><code>shop-api-automation</code></td><td><code>shop-web-automation</code></td><td><code>shop-mobile-automation</code></td></tr>
+<tr><td><strong>Language</strong></td><td>Java 21</td><td>TypeScript</td><td>Java 21</td></tr>
+<tr><td><strong>Runner</strong></td><td>cucumber-jvm on JUnit Platform (<code>RunApiSuite</code>)</td><td>playwright-bdd: <code>bddgen</code> generates specs, Playwright runs them</td><td>cucumber-jvm on JUnit Platform (<code>RunMobileSuite</code>)</td></tr>
+<tr><td><strong>Driver</strong></td><td>Rest Assured (HTTP)</td><td>Playwright <code>page</code> and <code>request</code></td><td>Appium <code>AndroidDriver</code> (UiAutomator2)</td></tr>
+<tr><td><strong>Interaction layer</strong></td><td><code>services/*Api</code> behind the <code>ShopApi</code> facade</td><td><code>pages/*</code> page and component objects</td><td><code>screens/*</code> screen objects on <code>BaseScreen</code></td></tr>
+<tr><td><strong>Dependency injection</strong></td><td>PicoContainer (constructor injection)</td><td>Playwright fixtures in <code>src/fixtures/test.ts</code></td><td>PicoContainer (constructor injection)</td></tr>
+<tr><td><strong>Per-scenario state</strong></td><td><code>ScenarioContext</code></td><td><code>ScenarioState</code> fixture</td><td><code>ScenarioContext</code></td></tr>
+<tr><td><strong>Driver lifecycle</strong></td><td>No driver; stateless HTTP calls</td><td>Playwright creates a fresh browser context per test</td><td>ThreadLocal <code>DriverManager</code>; <code>@Before</code> starts it and clears app data, <code>@After</code> quits it</td></tr>
+<tr><td><strong>Locators</strong></td><td>None; request paths live in the services</td><td><code>getByTestId</code> on <code>data-testid</code> only</td><td><code>byTestId</code> wraps <code>UiSelector.resourceId</code>; <code>testID</code> is the raw Android resource-id</td></tr>
+<tr><td><strong>Waiting</strong></td><td>None needed; assert the change against a baseline</td><td>Playwright auto-wait, plus an explicit wait on the resulting state</td><td><code>WebDriverWait</code> with <code>ExpectedConditions</code> (20 s); never <code>Thread.sleep</code></td></tr>
+<tr><td><strong>Failure evidence</strong></td><td>Request/response dump</td><td>Screenshot and Playwright trace</td><td>Screenshot, page source and logcat tail</td></tr>
+<tr><td><strong>Allure output</strong></td><td><code>target/allure-results</code>; HTML in <code>target/site/allure-maven-plugin</code></td><td><code>allure-results</code>; HTML in <code>allure-report</code></td><td><code>target/allure-results</code>; HTML in <code>target/site/allure-maven-plugin</code></td></tr>
+<tr><td><strong>Run</strong></td><td><code>mvn -B test</code></td><td><code>npm test</code> (headed: <code>npm run test:headed</code>)</td><td><code>mvn -B test</code></td></tr></tbody></table>
+<h3>15.2 API &mdash; <code>shop-api-automation</code></h3>
+<pre><code>.feature -&gt; steps/*Steps.java -&gt; support/ShopApi -&gt; services/*Api.java -&gt; Rest Assured</code></pre>
+<table><thead><tr><th>Location</th><th>Responsibility</th></tr></thead>
+<tbody><tr><td><code>runner/</code></td><td><code>RunApiSuite</code> selects <code>../shop-qa-orchestrator/contracts/features</code>. Glue and the Allure plugin are set in <code>junit-platform.properties</code>.</td></tr>
+<tr><td><code>steps/</code></td><td>One <code>*Steps</code> class per feature. Assertions only; no URLs and no request building.</td></tr>
+<tr><td><code>support/ShopApi.java</code></td><td>Facade over the services. The only dependency of the step layer; also holds cross-cutting setup such as <code>replenishStock</code>.</td></tr>
+<tr><td><code>services/</code></td><td><code>BaseService</code> builds the request spec (base URI, JSON, Allure filter, bearer and test-token headers). One <code>*Api</code> class per resource. No assertions.</td></tr>
+<tr><td><code>context/ScenarioContext.java</code></td><td>Token, current user, last response and last order number for one scenario.</td></tr>
+<tr><td><code>fixtures/</code>, <code>config/</code></td><td><code>Fixtures</code> loads <code>contracts/fixtures/*.json</code>; <code>Config</code> reads <code>SHOP_API_BASE_URL</code>, <code>TEST_SUPPORT_TOKEN</code>, <code>CONTRACTS_DIR</code>.</td></tr>
+<tr><td><code>hooks/Hooks.java</code></td><td><code>@BeforeAll</code> tops up catalog stock; <code>@After</code> attaches the last response when a scenario fails.</td></tr></tbody></table>
+<h3>15.3 Web &mdash; <code>shop-web-automation</code></h3>
+<pre><code>.feature -&gt; bddgen -&gt; src/steps/*.steps.ts -&gt; src/pages/*.ts -&gt; Playwright</code></pre>
+<table><thead><tr><th>Location</th><th>Responsibility</th></tr></thead>
+<tbody><tr><td><code>src/steps/</code></td><td>One <code>*.steps.ts</code> per feature. Import <code>Given</code>, <code>When</code>, <code>Then</code> from <code>fixtures/test.js</code>. Assertions only, using <code>expect</code>.</td></tr>
+<tr><td><code>src/pages/</code></td><td><code>BasePage</code> (<code>byTestId</code>, <code>goto</code>) and one class per page, plus <code>HeaderComponent</code>. Interactions and waits only; they return locators for steps to assert on.</td></tr>
+<tr><td><code>src/fixtures/test.ts</code></td><td>Extends the playwright-bdd <code>test</code> with a fixture for every page object, <code>shopApi</code> and <code>state</code>. Adding a page object means adding a fixture.</td></tr>
+<tr><td><code>src/fixtures/contractFixtures.ts</code></td><td>Reads <code>contracts/fixtures/*.json</code>. No literals in steps.</td></tr>
+<tr><td><code>src/api/ShopApi.ts</code></td><td>Facade that seeds users, carts and addresses through the API for Background steps. Never asserts.</td></tr>
+<tr><td><code>playwright.config.ts</code></td><td><code>defineBddConfig</code> points <code>featuresRoot</code> at the contracts repo and lists both <code>src/steps/**</code> and <code>src/fixtures/test.ts</code>. <code>tags: @web</code>, <code>missingSteps: skip-scenario</code>, <code>workers: 1</code>.</td></tr>
+<tr><td><code>scripts/test-and-report.mjs</code></td><td>Runs <code>bddgen</code>, then the tests, then builds the Allure HTML even when tests fail.</td></tr></tbody></table>
+<h3>15.4 Mobile &mdash; <code>shop-mobile-automation</code></h3>
+<pre><code>.feature -&gt; steps/*Steps.java -&gt; screens/*Screen.java -&gt; DriverManager -&gt; Appium</code></pre>
+<table><thead><tr><th>Location</th><th>Responsibility</th></tr></thead>
+<tbody><tr><td><code>runner/</code></td><td><code>RunMobileSuite</code> selects the contracts directory with <code>@SelectDirectories</code>; surefire includes <code>**/Run*Suite.java</code>.</td></tr>
+<tr><td><code>steps/</code></td><td>One <code>*Steps</code> class per feature. Assertions only.</td></tr>
+<tr><td><code>screens/</code></td><td><code>BaseScreen</code> holds <code>byTestId</code>, explicit waits, <code>tap</code>, <code>textOf</code> and <code>scrollIntoViewByText</code> for virtualised lists. One screen class per app screen. Interactions and waits only.</td></tr>
+<tr><td><code>driver/DriverManager.java</code></td><td>ThreadLocal <code>AndroidDriver</code> factory. Keeps the installed APK (<code>noReset</code>) because the pipeline owns installation.</td></tr>
+<tr><td><code>support/ShopApi.java</code></td><td>Facade used to seed state through the API instead of the UI.</td></tr>
+<tr><td><code>context/</code>, <code>fixtures/</code>, <code>config/</code></td><td>Per-scenario <code>ScenarioContext</code>; <code>Fixtures</code> over the shared JSON; <code>Config</code> reads <code>APPIUM_URL</code>, <code>APP_PACKAGE</code>, device name.</td></tr>
+<tr><td><code>hooks/Hooks.java</code></td><td><code>@Before</code> starts the driver and clears app data so every scenario starts signed out; <code>@After</code> attaches screenshot, page source and logcat tail, then quits.</td></tr></tbody></table>
+<h3>15.5 Adding a scenario to any suite</h3>
+<table><thead><tr><th>Step</th><th>What to do</th></tr></thead>
+<tbody><tr><td>1</td><td>Get the scenario with <code>get_scenario</code>, or find the work with <code>find_gaps</code>.</td></tr>
+<tr><td>2</td><td>Add NEW step methods in the <code>steps</code> layer. Reuse an existing step only when its text matches exactly; step text is globally unique.</td></tr>
+<tr><td>3</td><td>Add interaction methods to the page, screen or service object. No assertions there.</td></tr>
+<tr><td>4</td><td>If setup needs seeded data, go through <code>ShopApi</code>, not the UI.</td></tr>
+<tr><td>5</td><td>Run the suite for that feature tag until green, then call <code>link_implementation</code> and confirm <code>get_coverage_matrix</code> shows <code>covered</code>.</td></tr></tbody></table>
+</section>
+
+<footer>Shop QA Platform handbook &middot; generated 2026-10-26T16:55:36.197Z &middot; regenerate with
 <code>node mcp/contract-mcp/generate-docs.mjs</code></footer>
 </main>
 </div>
