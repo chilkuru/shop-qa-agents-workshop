@@ -70,7 +70,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:v
 
 <h1>Shop QA Platform &mdash; Engineering Handbook</h1>
 <blockquote>One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.</blockquote>
-<p style="color:var(--muted);font-size:13px">Generated 2026-10-26T16:55:36.197Z from the live repositories and contract layer.</p>
+<p style="color:var(--muted);font-size:13px">Generated 2026-10-26T17:41:28.287Z from the live repositories and contract layer.</p>
 
 <section id="glance">
 <h2>1. At a glance</h2>
@@ -611,7 +611,8 @@ because Maven and Gradle use <code>JAVA_HOME</code>.</div>
 <tr><td><code>-Native</code></td><td>Run backend and web from source instead of Docker (needs JDK 21, Maven, and <code>npm ci</code> in <code>shop-platform/web</code>)</td></tr>
 <tr><td><code>-BuildApk</code></td><td>Build the release APK with Gradle instead of downloading it (needs the generated <code>android/</code> folder)</td></tr>
 <tr><td><code>-ReinstallApk</code></td><td>Install the APK even if <code>com.shop.mobile</code> is already on the emulator</td></tr>
-<tr><td><code>-Avd &lt;name&gt;</code></td><td>Use a different AVD (default <code>shop_test</code>)</td></tr></tbody></table>
+<tr><td><code>-Avd &lt;name&gt;</code></td><td>Use a different AVD (default <code>shop_test</code>). Created automatically when missing, if the Android SDK Command-line Tools are installed</td></tr>
+<tr><td><code>-SystemImage &lt;id&gt;</code></td><td>System image used when the AVD has to be created (default <code>system-images;android-35;google_apis;x86_64</code>, or <code>arm64-v8a</code> on ARM)</td></tr></tbody></table>
 <p><strong>Docker stack only.</strong> From the repo root, <code>docker compose up -d --build</code> starts Postgres, the backend (:8081) and the web app (:5173); <code>docker compose down</code> stops it (<code>-v</code> also wipes the database). Every credential in the compose file is a demo value for local use only. The repo root also holds <code>docker/web.Dockerfile</code> and a <code>README.md</code> quick start.</p>
 <p><strong>Manual steps.</strong> Run each from the Shop root. PowerShell does not accept the bash <code>VAR=value command</code> form; set <code>$env:VAR</code> first.</p>
 <table><thead><tr><th>Step</th><th>bash (macOS / Linux / CI)</th><th>Windows PowerShell</th><th>Notes</th></tr></thead>
@@ -861,7 +862,7 @@ static mutable state &middot; duplicated locators &middot; mechanical Gherkin &m
 <tr><td>5</td><td>Run the suite for that feature tag until green, then call <code>link_implementation</code> and confirm <code>get_coverage_matrix</code> shows <code>covered</code>.</td></tr></tbody></table>
 </section>
 
-<footer>Shop QA Platform handbook &middot; generated 2026-10-26T16:55:36.197Z &middot; regenerate with
+<footer>Shop QA Platform handbook &middot; generated 2026-10-26T17:41:28.287Z &middot; regenerate with
 <code>node mcp/contract-mcp/generate-docs.mjs</code></footer>
 </main>
 </div>

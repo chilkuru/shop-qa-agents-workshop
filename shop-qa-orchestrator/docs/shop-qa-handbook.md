@@ -2,7 +2,7 @@
 
 > **One Gherkin spec, three frameworks, two languages, orchestrated by a fleet of agents.**
 
-_Generated 2026-10-26T16:55:36.197Z from the live repositories and contract layer._
+_Generated 2026-10-26T17:41:28.287Z from the live repositories and contract layer._
 
 ## 1. At a glance
 
@@ -452,7 +452,8 @@ It checks prerequisites first, then starts only what is not already healthy and 
 | `-Native` | Run backend and web from source instead of Docker (needs JDK 21, Maven, and `npm ci` in `shop-platform/web`) |
 | `-BuildApk` | Build the release APK with Gradle instead of downloading it (needs the generated `android/` folder) |
 | `-ReinstallApk` | Install the APK even if `com.shop.mobile` is already on the emulator |
-| `-Avd <name>` | Use a different AVD (default `shop_test`) |
+| `-Avd <name>` | Use a different AVD (default `shop_test`). Created automatically when missing, if the Android SDK Command-line Tools are installed |
+| `-SystemImage <id>` | System image used when the AVD has to be created (default `system-images;android-35;google_apis;x86_64`, or `arm64-v8a` on ARM) |
 
 **Docker stack only.** From the repo root, `docker compose up -d --build` starts Postgres, the backend (:8081) and the web app (:5173); `docker compose down` stops it (`-v` also wipes the database). Every credential in the compose file is a demo value for local use only. The repo root also holds `docker/web.Dockerfile` and a `README.md` quick start.
 

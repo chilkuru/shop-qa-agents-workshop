@@ -48,7 +48,8 @@ const START_SCRIPT_OPTIONS = [
   ['`-Native`', 'Run backend and web from source instead of Docker (needs JDK 21, Maven, and `npm ci` in `shop-platform/web`)'],
   ['`-BuildApk`', 'Build the release APK with Gradle instead of downloading it (needs the generated `android/` folder)'],
   ['`-ReinstallApk`', 'Install the APK even if `com.shop.mobile` is already on the emulator'],
-  ['`-Avd <name>`', 'Use a different AVD (default `shop_test`)'],
+  ['`-Avd <name>`', 'Use a different AVD (default `shop_test`). Created automatically when missing, if the Android SDK Command-line Tools are installed'],
+  ['`-SystemImage <id>`', 'System image used when the AVD has to be created (default `system-images;android-35;google_apis;x86_64`, or `arm64-v8a` on ARM)'],
 ];
 
 const LOCAL_URLS = [

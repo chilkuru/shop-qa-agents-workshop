@@ -1,14 +1,16 @@
 # Brings up everything the three suites need. Safe to re-run: anything already healthy is left alone.
 # Default: the Docker stack (backend + web + Postgres) from the repo-root docker-compose.yml, and the
 # released APK downloaded from GitHub. Windows only.
-# Usage: powershell -ExecutionPolicy Bypass -File scripts/start-env.ps1 [-SkipMobile] [-Native] [-BuildApk] [-ReinstallApk] [-Avd <name>]
+# Usage: powershell -ExecutionPolicy Bypass -File scripts/start-env.ps1 [-SkipMobile] [-Native] [-BuildApk] [-ReinstallApk] [-Avd <name>] [-SystemImage <id>]
 #   -SkipMobile    API and web only: no emulator, Appium or APK.
+#   -SystemImage   Image used when the AVD has to be created (default: android-35 google_apis for this CPU).
 #   -Native        Run backend and web app from source (needs JDK 21, Maven, Node, `npm ci` in shop-platform/web).
 #   -BuildApk      Build the APK with Gradle instead of downloading it (needs the generated android/ folder).
 #   -ReinstallApk  Install the APK even if com.shop.mobile is already on the emulator.
 param(
     [string]$ShopRoot = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
     [string]$Avd = 'shop_test',
+    [string]$SystemImage = '',
     [switch]$SkipMobile,
     [switch]$Native,
     [switch]$BuildApk,
@@ -57,6 +59,45 @@ function Get-EmulatorExe {
         if ($sdk -and (Test-Path "$sdk\emulator\emulator.exe")) { return "$sdk\emulator\emulator.exe" }
     }
     throw 'emulator.exe not found; add the Android SDK emulator folder to PATH or set ANDROID_HOME'
+}
+
+function Get-CmdlineTool($name) {
+    foreach ($sdk in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "$env:LOCALAPPDATA\Android\Sdk")) {
+        if (-not $sdk) { continue }
+        $found = @(Get-ChildItem "$sdk\cmdline-tools\*\bin\$name.bat" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending)
+        if ($found.Count) { return $found[0].FullName }
+    }
+    $cmd = Get-Command "$name.bat" -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+}
+
+# Creates the AVD from the Android command-line tools; returns $false when they are not installed.
+function New-ShopAvd {
+    $sdkManager = Get-CmdlineTool 'sdkmanager'
+    $avdManager = Get-CmdlineTool 'avdmanager'
+    if (-not $sdkManager -or -not $avdManager) { return $false }
+
+    $abi = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64-v8a' } else { 'x86_64' }
+    $image = if ($SystemImage) { $SystemImage } else { "system-images;android-35;google_apis;$abi" }
+    Write-Step 'AVD' "creating $Avd from $image (first run downloads about 1.5 GB) ..."
+
+    # One 'y' per prompt; a single answer accepts only the first licence.
+    ("y`n" * 50) | cmd /c "`"$sdkManager`" --licenses" *> $null
+    # cmd treats ';' as an argument separator, so the image id must stay quoted.
+    cmd /c "`"$sdkManager`" `"$image`"" | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "sdkmanager could not install $image" }
+
+    # 'no' declines the custom hardware profile prompt.
+    'no' | cmd /c "`"$avdManager`" create avd --force --name $Avd --package `"$image`" --device pixel" | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "avdmanager could not create $Avd" }
+
+    $config = Join-Path $env:USERPROFILE ".android\avd\$Avd.avd\config.ini"
+    if (Test-Path $config) {
+        $lines = @(Get-Content $config | Where-Object { $_ -notmatch '^hw\.keyboard\s*=' })
+        ($lines + 'hw.keyboard = yes') | Set-Content $config
+    }
+    Write-Step 'AVD' "$Avd created" Green
+    return $true
 }
 
 # Users are not seeded by any migration, so upsert them from the contract fixtures on every start.
@@ -119,7 +160,11 @@ function Test-Prerequisites {
                 $avds = @(& $emulatorExe -list-avds)
                 if ($avds -notcontains $Avd) {
                     $found = if ($avds.Count) { $avds -join ', ' } else { 'none' }
-                    $missing.Add("Android emulator '$Avd' not found (available: $found). Create a Pixel device named $Avd in Android Studio's Device Manager, or pass -Avd <name>.")
+                    if (Get-CmdlineTool 'avdmanager') {
+                        $warnings.Add("Android emulator '$Avd' not found; it will be created on this run (downloads a system image, about 1.5 GB).")
+                    } else {
+                        $missing.Add("Android emulator '$Avd' not found (available: $found). Create a Pixel device named $Avd in Android Studio's Device Manager, or install 'Android SDK Command-line Tools (latest)' in SDK Manager so this script can create it, or pass -Avd <name>.")
+                    }
                 }
             }
         } catch {
@@ -236,7 +281,9 @@ try {
             $emulatorExe = Get-EmulatorExe
             $avds = @(& $emulatorExe -list-avds)
             if ($avds -notcontains $Avd) {
-                throw "AVD '$Avd' not found (available: $($avds -join ', ')). Create a Pixel AVD named $Avd in Android Studio's Device Manager, or pass -Avd <name>."
+                if (-not (New-ShopAvd)) {
+                    throw "AVD '$Avd' not found (available: $($avds -join ', ')). Create a Pixel AVD named $Avd in Android Studio's Device Manager, install the Android SDK Command-line Tools so this script can create it, or pass -Avd <name>."
+                }
             }
             Write-Step 'Emulator' "starting $Avd..."
             Start-Process $emulatorExe -ArgumentList "-avd $Avd -no-boot-anim -gpu swiftshader_indirect" -WindowStyle Minimized

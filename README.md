@@ -23,7 +23,7 @@ Open `shop-qa.code-workspace` in VS Code so all five folders load as one workspa
 - JDK 21 and Maven
 - Node.js 20+
 - VS Code with GitHub Copilot (agent mode)
-- Mobile only: Android SDK with an emulator, and Appium 3 with the `uiautomator2` driver
+- Mobile only: Android SDK with the emulator and the Command-line Tools (Android Studio > SDK Manager), and Appium 3 with the `uiautomator2` driver
 
 ## Get the code
 
@@ -50,11 +50,12 @@ It starts the Docker stack, installs the npm dependencies for the MCP servers an
 |---|---|
 | `-SkipMobile` | API and web only: no emulator, Appium or APK |
 | `-Avd <name>` | Use a different emulator (default `shop_test`) |
+| `-SystemImage <id>` | Image used when the emulator has to be created (default `system-images;android-35;google_apis;x86_64`, or `arm64-v8a` on ARM) |
 | `-ReinstallApk` | Install the APK even if it is already on the emulator |
 | `-Native` | Run backend and web from source instead of Docker (needs JDK 21, Maven, and `npm ci` in `shop-platform/web`) |
 | `-BuildApk` | Build the APK with Gradle instead of downloading it |
 
-For mobile it expects `adb` and `appium` on your PATH and an Android Virtual Device named `shop_test` (create a Pixel device in Android Studio's Device Manager, or pass `-Avd`).
+For mobile it expects `adb` and `appium` on your PATH. If the emulator `shop_test` does not exist, the script creates it as a Pixel device (the first run downloads about 1.5 GB), provided the Android SDK Command-line Tools are installed. Without them, create a Pixel device named `shop_test` in Android Studio's Device Manager, or pass `-Avd` with an emulator you already have.
 
 The script checks prerequisites first and lists everything that is missing, with where to get it, before starting anything. Docker, `adb`, the emulator, Appium and its `uiautomator2` driver are required (the last four unless you pass `-SkipMobile`). JDK 21, Maven and Node.js 20+ only produce a warning, because they are needed to run the suites rather than to start the stack; with `-Native` they are required.
 
