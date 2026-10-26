@@ -59,6 +59,37 @@ For mobile it expects `adb` and `appium` on your PATH. If the emulator `shop_tes
 
 The script checks prerequisites first and lists everything that is missing, with where to get it, before starting anything. Docker, `adb`, the emulator, Appium and its `uiautomator2` driver are required (the last four unless you pass `-SkipMobile`). JDK 21, Maven and Node.js 20+ only produce a warning, because they are needed to run the suites rather than to start the stack; with `-Native` they are required.
 
+**What success looks like.** The first run also prints Docker's build output, which takes a few minutes. When everything is up, the last lines of the script look like this (timings and paths differ):
+
+![Successful start-env run](shop-qa-orchestrator/docs/images/start-env-success.png)
+
+<details>
+<summary>The same output as text</summary>
+
+```
+Shop environment (C:\code\WorkShop\shop-qa-agents-workshop)
+  Checks     prerequisites present
+  Node deps  installed
+  Stack      docker compose up -d --build ...
+  Backend    up on :8081
+  Web app    up on :5173
+  Users      seeded 4 fixture users
+  Emulator   starting shop_test...
+  Emulator   booted (emulator-5554)
+  Appium     starting...
+  Appium     up on :4723
+  APK        downloading release...
+  APK        ready (C:\code\WorkShop\shop-qa-agents-workshop\downloads\app-release.apk)
+  APK        com.shop.mobile installed
+  App        com.shop.mobile opened
+
+Ready. Web app: http://localhost:5173   Swagger: http://localhost:8081/swagger-ui.html
+```
+
+</details>
+
+If you see `Ready.` and no `FAILED:` line, the environment is up: the web app answers on :5173, the API on :8081, Appium on :4723, and the emulator shows the shop app. With `-SkipMobile` the emulator, Appium, APK and App lines are absent. If the script stops, the last line reads `FAILED:` followed by the reason.
+
 > **Not using the script?** Skip it and follow [Quick start](#quick-start) below, then continue with the sections after it. Without the script you must seed the demo users, install the MCP server dependencies and set up the mobile environment yourself; the sections below cover each.
 
 ## Quick start
