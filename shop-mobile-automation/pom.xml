@@ -165,6 +165,7 @@
                 <artifactId>maven-clean-plugin</artifactId>
                 <version>3.4.0</version>
                 <executions>
+                    <?m2e ignore?>
                     <execution>
                         <id>clean-allure-results</id>
                         <phase>initialize</phase>
